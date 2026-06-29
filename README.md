@@ -6,8 +6,24 @@ and engage — built faithfully on David Allen's GTD. Web-first, open-core.
 
 ## Current status
 
-Planning complete and adversarially reviewed. **Next step: scaffold Phase 1** (capture +
-inbox + backend) per [`docs/PHASE-1.md`](docs/PHASE-1.md). **No code yet.**
+**Phase 1 in progress — steps 1–4 built (capture trust spine + inbox).** Offline-first
+capture works end-to-end against a `LocalOnlyAdapter` (zero backend): optimistic insert,
+durable IndexedDB op-log, idempotent/in-sequence/tombstone apply, background sync engine.
+**Step 5 (Supabase backend) is deferred** until Docker/the Supabase CLI is available locally
+(or a hosted project is wired in) — [`docs/PHASE-1.md`](docs/PHASE-1.md) plans for exactly
+this: steps 1–4 are not blocked by backend setup.
+
+### Run it
+
+```bash
+pnpm install
+pnpm dev            # http://localhost:3000  (capture + inbox, fully local)
+# PWA install / full offline-load needs a production build:
+pnpm build && pnpm start
+```
+
+Trust-spine code lives in [`src/lib/capture/`](src/lib/capture/); the single backend
+swap-point is [`src/lib/capture/adapter.ts`](src/lib/capture/adapter.ts).
 
 ## Docs — read in this order
 
@@ -22,7 +38,7 @@ inbox + backend) per [`docs/PHASE-1.md`](docs/PHASE-1.md). **No code yet.**
 ## Stack (decided)
 
 Web-first TypeScript · Next.js (App Router) + React + Tailwind · PWA · Supabase (Postgres +
-Auth + Storage) · Claude API (Opus 4.8 + Haiku 4.5) · local-first append op-log capture.
+Auth + Storage) · Claude API (Opus 4.8 + Haiku 4.5) · local-first, sequenced op-log capture.
 
 ## How to continue in a new session
 

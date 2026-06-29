@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+/*
+ * Calm, neutral theme. Capture must feel instant and quiet — no visual noise.
+ * Dark by default (matches the PWA theme_color); respects light mode.
+ */
+:root {
+  --background: #0b0b0c;
+  --surface: #161618;
+  --surface-2: #202023;
+  --border: #2a2a2e;
+  --foreground: #f5f5f5;
+  --muted: #a1a1aa;
+  --accent: #6366f1;
+  --accent-foreground: #ffffff;
+  --danger: #ef4444;
+  --success: #22c55e;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --background: #fafafa;
+    --surface: #ffffff;
+    --surface-2: #f4f4f5;
+    --border: #e4e4e7;
+    --foreground: #18181b;
+    --muted: #71717a;
+    --accent: #4f46e5;
+    --accent-foreground: #ffffff;
+    --danger: #dc2626;
+    --success: #16a34a;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  /* Respect notches / safe areas for installed PWA */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+}
+
+/* Remove tap-highlight flashes on mobile for a native feel */
+* {
+  -webkit-tap-highlight-color: transparent;
+}

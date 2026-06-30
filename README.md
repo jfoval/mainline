@@ -6,6 +6,9 @@ and engage — built faithfully on David Allen's GTD. Web-first, open-core.
 
 ## Current status
 
+**Live preview:** https://jfoval.github.io/mainline/ (auto-deploys on push to `main` via
+GitHub Pages; single-device — each device keeps its own local data until Supabase is wired).
+
 **Phase 1 in progress — steps 1–4 built (capture trust spine + inbox).** Offline-first
 capture works end-to-end against a `LocalOnlyAdapter` (zero backend): optimistic insert,
 durable IndexedDB op-log, idempotent/in-sequence/tombstone apply, background sync engine.

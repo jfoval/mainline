@@ -1,5 +1,11 @@
 # Phase 1 — Capture + Inbox + Backend (build plan)
 
+> **STATUS (2026-06-30):** Steps 1–4 ✅ **done** — built, adversarially reviewed (12 bugs
+> fixed), Vitest-tested, branded, themed, and deployed live on a `LocalOnlyAdapter` (no
+> backend). **Step 5 (Supabase) is the next build step:** the migration + FORCE RLS +
+> idempotent sync RPC are drafted in [`../supabase/migrations/0001_phase1_captures.sql`](../supabase/migrations/0001_phase1_captures.sql);
+> follow [`PHASE-1-SUPABASE.md`](PHASE-1-SUPABASE.md) to connect a project.
+
 > The first thing to build. Goal: a **bulletproof capture trust spine** — idea → captured
 > in <2s, voice or text, fully offline, never lost or duplicated — plus an inbox and a
 > syncing backend. **No AI yet** (that's Phase 2). Read [`FOUNDATIONS.md`](FOUNDATIONS.md),

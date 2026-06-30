@@ -13,7 +13,7 @@ export default function CapturePage() {
       <CaptureBox />
       <p className="text-sm text-muted">
         Everything lands in your{" "}
-        <Link href="/inbox" className="text-accent underline-offset-4 hover:underline">
+        <Link href="/inbox" className="text-accent-link underline-offset-4 hover:underline">
           inbox
         </Link>
         .

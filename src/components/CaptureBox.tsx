@@ -76,7 +76,7 @@ export function CaptureBox() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="capture-card rounded-2xl border border-border bg-surface p-3">
+      <div className="capture-card rounded-[10px] border border-border bg-surface p-3">
         <textarea
           ref={textRef}
           value={text}
@@ -98,7 +98,7 @@ export function CaptureBox() {
                 className={`flex h-10 w-10 items-center justify-center rounded-full border transition-colors ${
                   listening
                     ? "border-danger bg-danger/10 text-danger animate-pulse"
-                    : "border-border text-muted hover:border-accent hover:text-accent"
+                    : "border-border text-muted transition-colors hover:border-border-strong hover:text-foreground"
                 }`}
               >
                 <MicIcon />
@@ -110,7 +110,7 @@ export function CaptureBox() {
             type="button"
             onClick={() => void submit()}
             disabled={!text.trim()}
-            className="btn-accent rounded-xl px-5 py-2.5 font-medium"
+            className="btn-accent rounded-lg px-5 py-2.5 font-medium"
           >
             Capture
           </button>
@@ -135,7 +135,7 @@ function StatusLine({
   let tone: string;
   if (justCaptured) {
     label = "Captured ✓";
-    tone = "text-success";
+    tone = "text-foreground";
   } else if (!online && pending > 0) {
     label = `Offline · ${pending} saved locally, will sync`;
     tone = "text-muted";

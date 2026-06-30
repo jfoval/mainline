@@ -22,7 +22,7 @@ export function InboxList() {
   }
 
   return (
-    <ul className="flex flex-col gap-2">
+    <ul className="divide-y divide-border">
       {items.map((capture) => (
         <CaptureRow key={capture.client_id} capture={capture} />
       ))}
@@ -51,7 +51,7 @@ function CaptureRow({ capture }: { capture: Capture }) {
   };
 
   return (
-    <li className="rounded-xl border border-border bg-surface p-3">
+    <li className="-mx-1 rounded-md px-2 py-3.5 transition-colors hover:bg-white/[0.03]">
       {editing ? (
         <div className="flex flex-col gap-2">
           <textarea
@@ -66,13 +66,13 @@ function CaptureRow({ capture }: { capture: Capture }) {
               if (e.key === "Escape") setEditing(false);
             }}
             rows={3}
-            className="w-full resize-none rounded-lg border border-border bg-surface-2 p-2 outline-none focus:border-accent"
+            className="w-full resize-none rounded-md border border-border bg-surface-2 p-2 outline-none focus:border-accent"
           />
           <div className="flex justify-end gap-2 text-sm">
             <button
               type="button"
               onClick={() => setEditing(false)}
-              className="rounded-lg px-3 py-1.5 text-muted hover:bg-surface-2"
+              className="rounded-md px-3 py-1.5 text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
             >
               Cancel
             </button>
@@ -125,7 +125,7 @@ function SyncBadge({ pending }: { pending: boolean }) {
   return (
     <span className="inline-flex items-center gap-1">
       <span
-        className={`h-1.5 w-1.5 rounded-full ${pending ? "bg-amber-500" : "bg-success"}`}
+        className={`h-1.5 w-1.5 rounded-full ${pending ? "bg-warning" : "bg-success"}`}
         aria-hidden
       />
       {pending ? "Saving…" : "Synced"}

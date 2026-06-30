@@ -1,28 +1,31 @@
 @import "tailwindcss";
 
 /*
- * Mainline theme — true black, accented with a sharp, neon-glowing light blue pulled from the
- * logo (#00C6E2 → #008BE8). Dark-only by design; the app leans all the way into black.
+ * Mainline theme — "System Azure on Black".
+ * Pure black, mostly white, sparse azure-blue accents. Flat and crisp: zero glow.
+ * Accent #0A6FE0 (button fill, white text, WCAG AA) and a brighter #3B9CFF for links.
  */
 :root {
   color-scheme: dark;
 
-  --background: #000000; /* true black canvas */
-  --surface: #0a0c0f; /* elevated cards */
-  --surface-2: #12161b; /* inputs / hover */
-  --border: #1b2127; /* cool hairline */
-  --border-strong: #27303a;
+  --background: #000000;
+  --surface: #0a0a0b;
+  --surface-2: #161618;
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.18);
 
-  --foreground: #eaf2f7; /* near-white, cool */
-  --muted: #7a8794; /* cool gray */
+  --foreground: #ffffff;
+  --muted: #8a8a8e;
+  --tertiary: #6e6e73;
 
-  --accent: #22ccff; /* neon light blue */
-  --accent-strong: #6fe0ff; /* brighter highlight */
-  --accent-deep: #0a93e6; /* deeper blue (gradients) */
-  --accent-foreground: #001019; /* dark text on the neon button */
+  --accent: #0a6fe0; /* primary button fill */
+  --accent-hover: #0959be;
+  --accent-foreground: #ffffff;
+  --accent-link: #3b9cff; /* links + active nav (brighter, AAA on black) */
 
-  --danger: #ff5b6e;
-  --success: #2be3a0; /* teal-green, stays on-palette */
+  --danger: #ff453a;
+  --success: #3fb37f; /* status dots only */
+  --warning: #ff9f0a; /* "saving" dot only */
 }
 
 @theme inline {
@@ -33,12 +36,14 @@
   --color-border-strong: var(--border-strong);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
+  --color-tertiary: var(--tertiary);
   --color-accent: var(--accent);
-  --color-accent-strong: var(--accent-strong);
-  --color-accent-deep: var(--accent-deep);
+  --color-accent-hover: var(--accent-hover);
   --color-accent-foreground: var(--accent-foreground);
+  --color-accent-link: var(--accent-link);
   --color-danger: var(--danger);
   --color-success: var(--success);
+  --color-warning: var(--warning);
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
@@ -56,66 +61,28 @@ body {
     env(safe-area-inset-left);
 }
 
-/* Ambient glow — a whisper of blue near the top, behind everything. */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(
-      50% 34% at 50% -10%,
-      color-mix(in srgb, var(--accent) 5%, transparent),
-      transparent 70%
-    );
-}
-
-/* Keep app content above the ambient glow. */
-body > * {
-  position: relative;
-  z-index: 1;
-}
-
 * {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ── Accent utilities (subtle) ─────────────────────────────────────────── */
-.glow {
-  box-shadow: 0 0 16px -10px color-mix(in srgb, var(--accent) 55%, transparent);
-}
-.glow-sm {
-  box-shadow: 0 0 10px -8px color-mix(in srgb, var(--accent) 50%, transparent);
-}
-.text-glow {
-  text-shadow: 0 0 10px color-mix(in srgb, var(--accent) 22%, transparent);
-}
-.ring-glow {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
-}
-
-/* Consistent, on-brand keyboard focus — a clean ring, no halo. */
+/* Crisp, flat keyboard focus — a 2px black gap then a 2px solid azure ring. No blur. */
 :where(a, button, textarea, input, [tabindex]):focus-visible {
   outline: none;
   box-shadow:
     0 0 0 2px var(--background),
-    0 0 0 3px color-mix(in srgb, var(--accent) 65%, transparent);
+    0 0 0 4px var(--accent);
 }
 
-/* Accent button — flat neon blue, just a touch of lift on hover. */
+/* The one blue button — flat fill, flat hover. No glow. */
 .btn-accent {
   background: var(--accent);
   color: var(--accent-foreground);
   transition:
-    box-shadow 0.15s ease,
-    filter 0.15s ease,
+    background-color 0.15s ease,
     transform 0.05s ease;
 }
 .btn-accent:hover:not(:disabled) {
-  filter: brightness(1.05);
-  box-shadow: 0 0 18px -10px color-mix(in srgb, var(--accent) 55%, transparent);
+  background: var(--accent-hover);
 }
 .btn-accent:active:not(:disabled) {
   transform: translateY(0.5px);
@@ -124,13 +91,10 @@ body > * {
   opacity: 0.4;
 }
 
-/* Capture input shell — accent border on focus, only the faintest glow. */
+/* Capture input shell — flat at rest; a crisp azure 1px border on focus. */
 .capture-card {
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
+  transition: border-color 0.15s ease;
 }
 .capture-card:focus-within {
   border-color: var(--accent);
-  box-shadow: 0 0 22px -16px color-mix(in srgb, var(--accent) 55%, transparent);
 }

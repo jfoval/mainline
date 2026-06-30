@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { InboxList } from "@/components/InboxList";
+import { ResetLocalDataButton } from "@/components/ResetLocalDataButton";
 
 export default function InboxPage() {
   return (
@@ -17,6 +18,9 @@ export default function InboxPage() {
         </Link>
       </div>
       <InboxList />
+      <div className="mt-auto flex justify-end pt-4">
+        <ResetLocalDataButton />
+      </div>
     </div>
   );
 }

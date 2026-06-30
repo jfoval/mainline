@@ -3,11 +3,14 @@ import Link from "next/link";
 import "./globals.css";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
 
+// basePath-aware asset prefix ("" locally, "/mainline" on GitHub Pages). The manifest link is
+// injected automatically from app/manifest.ts (already basePath-aware), so it's omitted here.
+const bp = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
 export const metadata: Metadata = {
   title: "GTD — Capture",
   description:
     "Insanely easy capture for Getting Things Done. Idea to captured in under two seconds, even offline.",
-  manifest: "/manifest.webmanifest",
   applicationName: "GTD",
   appleWebApp: {
     capable: true,
@@ -15,8 +18,8 @@ export const metadata: Metadata = {
     title: "GTD",
   },
   icons: {
-    icon: "/icon.svg",
-    apple: "/icon.svg",
+    icon: `${bp}/icon.svg`,
+    apple: `${bp}/icon.svg`,
   },
 };
 

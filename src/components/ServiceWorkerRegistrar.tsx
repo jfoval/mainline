@@ -13,7 +13,9 @@ export function ServiceWorkerRegistrar() {
     if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
 
     const onLoad = () => {
-      navigator.serviceWorker.register("/sw.js").catch(() => {
+      // basePath-aware: "/sw.js" locally, "/mainline/sw.js" on GitHub Pages.
+      const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
+      navigator.serviceWorker.register(`${base}/sw.js`).catch(() => {
         // Registration failure must never break the app — capture still works.
       });
     };

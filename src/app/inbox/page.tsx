@@ -10,10 +10,7 @@ export default function InboxPage() {
           <h1 className="text-2xl font-semibold tracking-tight">Inbox</h1>
           <p className="mt-1 text-sm text-muted">Everything you&apos;ve captured, newest first.</p>
         </div>
-        <Link
-          href="/"
-          className="rounded-xl bg-accent px-4 py-2 text-sm font-medium text-accent-foreground"
-        >
+        <Link href="/" className="btn-accent rounded-xl px-4 py-2 text-sm font-medium">
           + Capture
         </Link>
       </div>

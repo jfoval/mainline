@@ -1,35 +1,28 @@
 @import "tailwindcss";
 
 /*
- * Calm, neutral theme. Capture must feel instant and quiet — no visual noise.
- * Dark by default (matches the PWA theme_color); respects light mode.
+ * Mainline theme — true black, accented with a sharp, neon-glowing light blue pulled from the
+ * logo (#00C6E2 → #008BE8). Dark-only by design; the app leans all the way into black.
  */
 :root {
-  --background: #0b0b0c;
-  --surface: #161618;
-  --surface-2: #202023;
-  --border: #2a2a2e;
-  --foreground: #f5f5f5;
-  --muted: #a1a1aa;
-  --accent: #6366f1;
-  --accent-foreground: #ffffff;
-  --danger: #ef4444;
-  --success: #22c55e;
-}
+  color-scheme: dark;
 
-@media (prefers-color-scheme: light) {
-  :root {
-    --background: #fafafa;
-    --surface: #ffffff;
-    --surface-2: #f4f4f5;
-    --border: #e4e4e7;
-    --foreground: #18181b;
-    --muted: #71717a;
-    --accent: #4f46e5;
-    --accent-foreground: #ffffff;
-    --danger: #dc2626;
-    --success: #16a34a;
-  }
+  --background: #000000; /* true black canvas */
+  --surface: #0a0c0f; /* elevated cards */
+  --surface-2: #12161b; /* inputs / hover */
+  --border: #1b2127; /* cool hairline */
+  --border-strong: #27303a;
+
+  --foreground: #eaf2f7; /* near-white, cool */
+  --muted: #7a8794; /* cool gray */
+
+  --accent: #22ccff; /* neon light blue */
+  --accent-strong: #6fe0ff; /* brighter highlight */
+  --accent-deep: #0a93e6; /* deeper blue (gradients) */
+  --accent-foreground: #001019; /* dark text on the neon button */
+
+  --danger: #ff5b6e;
+  --success: #2be3a0; /* teal-green, stays on-palette */
 }
 
 @theme inline {
@@ -37,9 +30,12 @@
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-deep: var(--accent-deep);
   --color-accent-foreground: var(--accent-foreground);
   --color-danger: var(--danger);
   --color-success: var(--success);
@@ -56,12 +52,93 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
-  /* Respect notches / safe areas for installed PWA */
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
     env(safe-area-inset-left);
 }
 
-/* Remove tap-highlight flashes on mobile for a native feel */
+/* Ambient neon glow — a faint blue haze near the top, behind everything. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      55% 38% at 50% -8%,
+      color-mix(in srgb, var(--accent) 14%, transparent),
+      transparent 70%
+    );
+}
+
+/* Keep app content above the ambient glow. */
+body > * {
+  position: relative;
+  z-index: 1;
+}
+
 * {
   -webkit-tap-highlight-color: transparent;
+}
+
+/* ── Neon glow utilities ───────────────────────────────────────────────── */
+.glow {
+  box-shadow: 0 0 26px -6px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+.glow-sm {
+  box-shadow: 0 0 16px -6px color-mix(in srgb, var(--accent) 65%, transparent);
+}
+.text-glow {
+  text-shadow: 0 0 18px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+/* Glowing accent ring (focus / active emphasis). */
+.ring-glow {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 1px var(--accent),
+    0 0 30px -8px color-mix(in srgb, var(--accent) 80%, transparent);
+}
+
+/* Consistent, on-brand keyboard focus everywhere. */
+:where(a, button, textarea, input, [tabindex]):focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--background),
+    0 0 0 4px color-mix(in srgb, var(--accent) 75%, transparent),
+    0 0 22px -6px var(--accent);
+}
+
+/* Neon accent button — glows, brightens on hover. */
+.btn-accent {
+  background: var(--accent);
+  color: var(--accent-foreground);
+  box-shadow: 0 0 24px -6px color-mix(in srgb, var(--accent) 70%, transparent);
+  transition:
+    box-shadow 0.15s ease,
+    filter 0.15s ease,
+    transform 0.05s ease;
+}
+.btn-accent:hover:not(:disabled) {
+  filter: brightness(1.07);
+  box-shadow: 0 0 32px -4px color-mix(in srgb, var(--accent) 85%, transparent);
+}
+.btn-accent:active:not(:disabled) {
+  transform: translateY(0.5px);
+}
+.btn-accent:disabled {
+  opacity: 0.4;
+  box-shadow: none;
+}
+
+/* Capture input shell — lights up with a blue glow on focus. */
+.capture-card {
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.capture-card:focus-within {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 1px var(--accent),
+    0 0 44px -12px color-mix(in srgb, var(--accent) 80%, transparent);
 }

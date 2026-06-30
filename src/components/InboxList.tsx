@@ -79,7 +79,7 @@ function CaptureRow({ capture }: { capture: Capture }) {
             <button
               type="button"
               onClick={() => void save()}
-              className="rounded-lg bg-accent px-3 py-1.5 font-medium text-accent-foreground"
+              className="btn-accent rounded-lg px-3 py-1.5 font-medium"
             >
               Save
             </button>

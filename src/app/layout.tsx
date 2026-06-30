@@ -25,7 +25,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0b0b0c",
+  themeColor: "#000000",
   width: "device-width",
   initialScale: 1,
   // Let content extend under notches; we pad via env(safe-area-inset-*) in globals.
@@ -53,7 +53,7 @@ export default function RootLayout({
                 className="h-7 w-7"
                 priority
               />
-              <span className="text-lg font-semibold tracking-tight">Mainline</span>
+              <span className="text-glow text-lg font-semibold tracking-tight">Mainline</span>
             </Link>
             <div className="flex items-center gap-1 text-sm">
               <Link

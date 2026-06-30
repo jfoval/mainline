@@ -8,10 +8,10 @@ export const dynamic = "force-static";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "GTD — Capture",
-    short_name: "GTD",
+    name: "Mainline",
+    short_name: "Mainline",
     description:
-      "Insanely easy capture for Getting Things Done. Idea to captured in under two seconds, even offline.",
+      "Mainline — insanely easy capture for getting things done. Idea to captured in under two seconds, even offline.",
     id: `${bp}/`,
     start_url: `${bp}/`,
     scope: `${bp}/`,
@@ -21,8 +21,9 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: "portrait",
     categories: ["productivity"],
     icons: [
-      { src: `${bp}/icon.svg`, sizes: "any", type: "image/svg+xml", purpose: "any" },
-      { src: `${bp}/icon.svg`, sizes: "any", type: "image/svg+xml", purpose: "maskable" },
+      { src: `${bp}/icon-192.png`, sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: `${bp}/icon-512.png`, sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: `${bp}/maskable-512.png`, sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
   };
 }

@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import "./globals.css";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
@@ -8,18 +9,18 @@ import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
 const bp = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
 export const metadata: Metadata = {
-  title: "GTD — Capture",
+  title: "Mainline",
   description:
-    "Insanely easy capture for Getting Things Done. Idea to captured in under two seconds, even offline.",
-  applicationName: "GTD",
+    "Mainline — insanely easy capture for getting things done. Idea to captured in under two seconds, even offline.",
+  applicationName: "Mainline",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "GTD",
+    title: "Mainline",
   },
   icons: {
-    icon: `${bp}/icon.svg`,
-    apple: `${bp}/icon.svg`,
+    icon: `${bp}/icon-192.png`,
+    apple: `${bp}/apple-touch-icon.png`,
   },
 };
 
@@ -43,8 +44,16 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur">
           <nav className="mx-auto flex w-full max-w-2xl items-center justify-between px-4 py-3">
-            <Link href="/" className="font-semibold tracking-tight">
-              GTD
+            <Link href="/" className="flex items-center gap-2">
+              <Image
+                src="/logo-mark.png"
+                alt=""
+                width={28}
+                height={28}
+                className="h-7 w-7"
+                priority
+              />
+              <span className="text-lg font-semibold tracking-tight">Mainline</span>
             </Link>
             <div className="flex items-center gap-1 text-sm">
               <Link

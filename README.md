@@ -1,4 +1,4 @@
-# GTD App (working title)
+# Mainline
 
 The ultimate Getting Things Done app: **insanely easy capture** (voice/text, any device,
 offline-proof) feeding an **AI-assisted but simple** system to clarify, organize, review,

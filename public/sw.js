@@ -10,9 +10,9 @@
  *
  * Registered in production only (see ServiceWorkerRegistrar) to avoid fighting Next dev HMR.
  */
-const CACHE = "gtd-shell-v1";
+const CACHE = "mainline-shell-v1";
 // Relative to the SW location → "/" locally, "/mainline/" on Pages. trailingSlash routes.
-const SHELL = ["./", "./inbox/", "./manifest.webmanifest", "./icon.svg"];
+const SHELL = ["./", "./inbox/", "./manifest.webmanifest", "./icon-192.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

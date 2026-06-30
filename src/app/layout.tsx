@@ -46,7 +46,7 @@ export default function RootLayout({
           <nav className="mx-auto flex w-full max-w-2xl items-center justify-between px-4 py-3">
             <Link href="/" className="flex items-center gap-2">
               <Image
-                src="/logo-mark.png"
+                src={`${bp}/logo-mark.png`}
                 alt=""
                 width={28}
                 height={28}

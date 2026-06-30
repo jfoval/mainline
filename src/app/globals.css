@@ -56,7 +56,7 @@ body {
     env(safe-area-inset-left);
 }
 
-/* Ambient neon glow — a faint blue haze near the top, behind everything. */
+/* Ambient glow — a whisper of blue near the top, behind everything. */
 body::before {
   content: "";
   position: fixed;
@@ -65,8 +65,8 @@ body::before {
   pointer-events: none;
   background:
     radial-gradient(
-      55% 38% at 50% -8%,
-      color-mix(in srgb, var(--accent) 14%, transparent),
+      50% 34% at 50% -10%,
+      color-mix(in srgb, var(--accent) 5%, transparent),
       transparent 70%
     );
 }
@@ -81,56 +81,50 @@ body > * {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ── Neon glow utilities ───────────────────────────────────────────────── */
+/* ── Accent utilities (subtle) ─────────────────────────────────────────── */
 .glow {
-  box-shadow: 0 0 26px -6px color-mix(in srgb, var(--accent) 70%, transparent);
+  box-shadow: 0 0 16px -10px color-mix(in srgb, var(--accent) 55%, transparent);
 }
 .glow-sm {
-  box-shadow: 0 0 16px -6px color-mix(in srgb, var(--accent) 65%, transparent);
+  box-shadow: 0 0 10px -8px color-mix(in srgb, var(--accent) 50%, transparent);
 }
 .text-glow {
-  text-shadow: 0 0 18px color-mix(in srgb, var(--accent) 50%, transparent);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--accent) 22%, transparent);
 }
-/* Glowing accent ring (focus / active emphasis). */
 .ring-glow {
   border-color: var(--accent);
-  box-shadow:
-    0 0 0 1px var(--accent),
-    0 0 30px -8px color-mix(in srgb, var(--accent) 80%, transparent);
+  box-shadow: 0 0 0 1px var(--accent);
 }
 
-/* Consistent, on-brand keyboard focus everywhere. */
+/* Consistent, on-brand keyboard focus — a clean ring, no halo. */
 :where(a, button, textarea, input, [tabindex]):focus-visible {
   outline: none;
   box-shadow:
     0 0 0 2px var(--background),
-    0 0 0 4px color-mix(in srgb, var(--accent) 75%, transparent),
-    0 0 22px -6px var(--accent);
+    0 0 0 3px color-mix(in srgb, var(--accent) 65%, transparent);
 }
 
-/* Neon accent button — glows, brightens on hover. */
+/* Accent button — flat neon blue, just a touch of lift on hover. */
 .btn-accent {
   background: var(--accent);
   color: var(--accent-foreground);
-  box-shadow: 0 0 24px -6px color-mix(in srgb, var(--accent) 70%, transparent);
   transition:
     box-shadow 0.15s ease,
     filter 0.15s ease,
     transform 0.05s ease;
 }
 .btn-accent:hover:not(:disabled) {
-  filter: brightness(1.07);
-  box-shadow: 0 0 32px -4px color-mix(in srgb, var(--accent) 85%, transparent);
+  filter: brightness(1.05);
+  box-shadow: 0 0 18px -10px color-mix(in srgb, var(--accent) 55%, transparent);
 }
 .btn-accent:active:not(:disabled) {
   transform: translateY(0.5px);
 }
 .btn-accent:disabled {
   opacity: 0.4;
-  box-shadow: none;
 }
 
-/* Capture input shell — lights up with a blue glow on focus. */
+/* Capture input shell — accent border on focus, only the faintest glow. */
 .capture-card {
   transition:
     border-color 0.15s ease,
@@ -138,7 +132,5 @@ body > * {
 }
 .capture-card:focus-within {
   border-color: var(--accent);
-  box-shadow:
-    0 0 0 1px var(--accent),
-    0 0 44px -12px color-mix(in srgb, var(--accent) 80%, transparent);
+  box-shadow: 0 0 22px -16px color-mix(in srgb, var(--accent) 55%, transparent);
 }

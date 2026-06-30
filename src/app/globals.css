@@ -65,8 +65,10 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Crisp, flat keyboard focus — a 2px black gap then a 2px solid azure ring. No blur. */
-:where(a, button, textarea, input, [tabindex]):focus-visible {
+/* Crisp, flat keyboard focus — a 2px black gap then a 2px solid azure ring. No blur.
+ * Text fields are intentionally excluded: they show focus via their (card) border turning
+ * azure, so an extra ring would be a redundant "box inside the box". */
+:where(a, button, [tabindex]):focus-visible {
   outline: none;
   box-shadow:
     0 0 0 2px var(--background),

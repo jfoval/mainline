@@ -7,7 +7,8 @@
 -- Invariants enforced server-side (mirror src/lib/capture/apply.ts::applyOpToServer):
 --   1. idempotent + in-order: ignore ops with client_seq <= the row's current seq
 --   2. tombstone: status='discarded' is terminal — no op resurrects it
---   3. server clock: synced_at/server_seq are server-stamped; captured_at is display-only
+--   3. server clock: synced_at/server_seq are server-stamped; captured_at is display-only,
+--      with skew_ms computed server-side and an implausibly-future captured_at clamped to now()
 -- Every user-owned table: user_id NOT NULL + FORCE RLS with a flat user_id = auth.uid() policy.
 
 -- ───────────────────────── profiles (1:1 with auth.users) ─────────────────────────
@@ -91,13 +92,16 @@ returns setof public.captures
 language plpgsql
 as $$
 declare
-  op       jsonb;
-  uid      uuid := auth.uid();
-  existing public.captures%rowtype;
-  cid      uuid;
-  seq      integer;
-  kind     text;
-  touched  uuid[] := '{}';
+  op         jsonb;
+  uid        uuid := auth.uid();
+  existing   public.captures%rowtype;
+  cid        uuid;
+  seq        integer;
+  kind       text;
+  touched    uuid[] := '{}';
+  v_now      timestamptz := now();   -- one server clock for the whole batch (== "one serverNow per flush")
+  v_captured timestamptz;
+  v_skew_ms  integer;
 begin
   if uid is null then
     raise exception 'not authenticated';
@@ -122,7 +126,7 @@ begin
       update public.captures set
         client_seq = seq,
         version    = existing.version + 1,
-        synced_at  = now(),
+        synced_at  = v_now,
         raw_text   = case when kind = 'edit'       then coalesce(op ->> 'raw_text', raw_text) else raw_text end,
         status     = case when kind = 'delete'     then 'discarded'
                           when kind = 'set_status' then coalesce(op ->> 'status', status)
@@ -131,13 +135,25 @@ begin
     else
       -- only a create can materialize a new row; a non-create with no row is an orphan (skip)
       if kind = 'create' then
-        insert into public.captures (user_id, client_id, client_seq, raw_text, source, captured_at, skew_ms, status, version)
+        -- Mirror applyOpToServer's create branch (src/lib/capture/apply.ts) exactly:
+        --   • skew_ms = device captured_at − server clock; the REAL drift, always recorded.
+        --   • captured_at is DISPLAY-ONLY and clamped to the server clock when implausibly far
+        --     in the future, so a bad device clock can't pollute display or pre-sync ordering.
+        --   • absent captured_at falls back to the server clock (column stays NOT-NULL in practice).
+        -- captured_at/skew_ms are computed server-side here; never trusted from the op payload.
+        v_captured := nullif(op ->> 'captured_at', '')::timestamptz;
+        v_skew_ms  := case when v_captured is not null
+                           then (extract(epoch from (v_captured - v_now)) * 1000)::integer
+                           else 0 end;
+        if v_captured is null or v_skew_ms > 300000 then  -- MAX_PLAUSIBLE_SKEW_MS = 5 min
+          v_captured := v_now;
+        end if;
+        insert into public.captures (user_id, client_id, client_seq, raw_text, source, captured_at, synced_at, skew_ms, status, version)
         values (
           uid, cid, seq,
           coalesce(op ->> 'raw_text', ''),
           coalesce(op ->> 'source', 'web'),
-          nullif(op ->> 'captured_at', '')::timestamptz,
-          nullif(op ->> 'skew_ms', '')::integer,
+          v_captured, v_now, v_skew_ms,
           'inbox', 1
         );
       end if;

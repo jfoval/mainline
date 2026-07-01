@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import "./globals.css";
+import { AuthGate } from "@/components/AuthGate";
+import { AuthStatus } from "@/components/AuthStatus";
 import { MainNav } from "@/components/MainNav";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
 
@@ -56,11 +58,14 @@ export default function RootLayout({
               />
               <span className="text-lg font-semibold tracking-tight">Mainline</span>
             </Link>
-            <MainNav />
+            <div className="flex items-center gap-1">
+              <MainNav />
+              <AuthStatus />
+            </div>
           </nav>
         </header>
         <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 py-6">
-          {children}
+          <AuthGate>{children}</AuthGate>
         </main>
         <ServiceWorkerRegistrar />
       </body>

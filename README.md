@@ -8,31 +8,34 @@ and engage — built faithfully on David Allen's GTD. Web-first, open-core.
 
 **Live:** https://jfoval.github.io/mainline/ (auto-deploys on push to `main`).
 
-**Phase 1 steps 1–4 are DONE** — capture trust spine + inbox, offline-first against a
-zero-backend `LocalOnlyAdapter`: optimistic insert, durable IndexedDB op-log,
-idempotent/in-sequence/tombstone apply, background sync engine, capture UI (text + voice),
-inbox (edit/delete). Adversarially reviewed (12 confirmed bugs found & fixed); invariants
-locked by a Vitest suite. Branded **Mainline**; themed **"System Azure on Black"** (true
-black, sparse azure-blue accent, no glow — tokens in [`src/app/globals.css`](src/app/globals.css)).
+**Phase 1 is DONE (steps 1–5).** Steps 1–4: capture trust spine + inbox, offline-first against a
+zero-backend `LocalOnlyAdapter` (optimistic insert, durable IndexedDB op-log,
+idempotent/in-sequence/tombstone apply, background sync engine, capture UI text + voice,
+inbox edit/delete). **Step 5: real backend live** — Supabase (Postgres + Auth), magic-link
+sign-in, and a `SupabaseAdapter` behind the env gate, with a `sync_capture_ops` RPC that mirrors
+`applyOpToServer` 1:1 under FORCE RLS. The trust-spine invariants + RLS isolation are proven
+against real Postgres by [`scripts/verify-supabase.mjs`](scripts/verify-supabase.mjs); the code
+was adversarially reviewed twice (12 + 14 findings). The app still runs fully offline (no auth,
+`LocalOnlyAdapter`) whenever env is absent — e.g. the GitHub Pages build. Branded **Mainline**;
+themed **"System Azure on Black"** (tokens in [`src/app/globals.css`](src/app/globals.css)).
 
-Health: `tsc` · `eslint` · `next build` · 13 tests — all green. Tree clean, pushed.
+Health: `tsc` · `eslint` · `next build` (env-absent export) · 13 tests · live Supabase harness — all green.
+
+> Remaining step-5 confirmation: the browser end-to-end (magic-link sign-in → capture → cross-device
+> sync) — the RPC/RLS contract underneath it is already proven. See [`docs/PHASE-1-SUPABASE.md`](docs/PHASE-1-SUPABASE.md).
 
 ## What's next — pick one
 
-**A · Real backend & cross-device sync — finishes Phase 1 (step 5). Recommended.**
-Schema + FORCE RLS + an idempotent sync RPC (mirrors `applyOpToServer`) are already written
-in [`supabase/migrations/0001_phase1_captures.sql`](supabase/migrations/0001_phase1_captures.sql),
-pending a live project. The only swap-point is [`src/lib/capture/adapter.ts`](src/lib/capture/adapter.ts).
-- **Hosted (≈3 min of your time):** create a free Supabase project → provide
-  `NEXT_PUBLIC_SUPABASE_URL` + anon key (see [`.env.example`](.env.example)). Then Claude
-  applies the migration, adds magic-link auth + a `SupabaseAdapter`, and verifies
-  no-loss/no-dup + RLS. Runbook: [`docs/PHASE-1-SUPABASE.md`](docs/PHASE-1-SUPABASE.md).
-- **Local:** install Docker Desktop; Claude runs the Supabase CLI locally.
+**A · Phase 2 — AI clarify + knowledge base. Recommended.** Propose→approve seam (HostedClaude),
+KB by GTD horizons. Now that captures sync to a real backend, there's real data to clarify against.
+Needs an Anthropic API key. Contract: [`docs/AI-CLARIFY-CONTRACT.md`](docs/AI-CLARIFY-CONTRACT.md).
 
-**B · Phase 2 — AI clarify + knowledge base.** Propose→approve seam (HostedClaude), KB by GTD
-horizons. Needs an Anthropic API key. Contract: [`docs/AI-CLARIFY-CONTRACT.md`](docs/AI-CLARIFY-CONTRACT.md).
+**B · Move to Vercel.** Backend + (soon) AI need server code GitHub Pages can't run, and the
+root host drops the `NEXT_PUBLIC_BASE_PATH` juggling. A natural next infra step (see note below).
 
-**C · Phase 1 polish.** P1.5 original-audio capture, multi-tab hardening, full PWA icon set, etc.
+**C · Phase 1 polish.** P1.5 original-audio capture, multi-tab hardening, full PWA icon set;
+plus the deferred backend hardening (route all writes through a SECURITY DEFINER path so a client
+can't direct-write its own rows' server fields — see [`0002`](supabase/migrations/0002_harden_captures.sql) header).
 
 > Hosting note: on GitHub Pages the app lives under `/mainline/`, so assets are
 > basePath-prefixed via `NEXT_PUBLIC_BASE_PATH`. That juggling disappears on a root host like

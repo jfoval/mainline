@@ -23,6 +23,21 @@ export async function sendMagicLink(email: string): Promise<string | null> {
   return error ? error.message : null;
 }
 
+/**
+ * Sign in with the 6-digit code from the same email. This path needs NO redirect, which makes
+ * it the only reliable sign-in inside an installed (home-screen) PWA: iOS isolates the app's
+ * storage from Safari, so a tapped magic LINK signs in Safari — never the installed app.
+ * Requires the Supabase "Magic Link" email template to include {{ .Token }}.
+ */
+export async function verifyEmailCode(email: string, code: string): Promise<string | null> {
+  const { error } = await getSupabase().auth.verifyOtp({
+    email,
+    token: code.trim(),
+    type: "email",
+  });
+  return error ? error.message : null;
+}
+
 export async function signOut(): Promise<void> {
   if (!isSupabaseEnabled()) return;
   await getSupabase().auth.signOut();

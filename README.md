@@ -66,10 +66,14 @@ Health: `tsc` · `eslint` · `next build` (env-absent export) · 34 tests · liv
 
 ## What's next — pick one
 
-**Go-live checklist (user steps, ~2 min total):** (1) `gh secret set` the two `NEXT_PUBLIC_SUPABASE_*`
+**Go-live checklist (user steps, ~3 min total):** (1) `gh secret set` the two `NEXT_PUBLIC_SUPABASE_*`
 repo secrets; (2) Supabase → Authentication → URL Configuration: Site URL + Redirect URL for
-`https://jfoval.github.io/mainline/`; (3) Supabase → SQL Editor: paste + run
-[`0003_gtd_sync.sql`](supabase/migrations/0003_gtd_sync.sql); (4) re-run the Pages deploy.
+`https://jfoval.github.io/mainline/`; (3) Supabase → Authentication → Emails → "Magic Link"
+template: make the body include the 6-digit code, e.g.
+`<p>Sign in: {{ .ConfirmationURL }}</p><p>Or enter this code in the app: {{ .Token }}</p>`
+(the code is how you sign in INSIDE the installed home-screen app — a tapped link signs in the
+browser instead); (4) Supabase → SQL Editor: paste + run
+[`0003_gtd_sync.sql`](supabase/migrations/0003_gtd_sync.sql); (5) re-run the Pages deploy.
 Optional proof: `VERIFY_EMAIL_BASE=you@gmail.com node --env-file=.env.local scripts/verify-supabase.mjs`
 (needs Auth "Confirm email" OFF during the run).
 

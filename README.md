@@ -19,6 +19,16 @@ was adversarially reviewed twice (12 + 14 findings). The app still runs fully of
 `LocalOnlyAdapter`) whenever env is absent — e.g. the GitHub Pages build. Branded **Mainline**;
 themed **"System Azure on Black"** (tokens in [`src/app/globals.css`](src/app/globals.css)).
 
+**Phase 2 (manual GTD engine) — Slice 1 is DONE:** the hand-driven core loop, AI-off by design
+(FOUNDATIONS §10 was resequenced: the manual engine now comes *before* AI). Clarify an inbox item
+— *actionable?* → verb-first **next action** with a context (2-min rule flagged), or → **Someday /
+Reference / Trash** — and the capture leaves the inbox via the synced op-log. New views: **Next**
+(actions grouped by context, check-off) and **Someday** (reactivate anytime). Local-first
+(`src/lib/gtd/`, IndexedDB) with the capture store's disciplines: durable-before-publish,
+generation-guarded logout wipes, cross-tab BroadcastChannel, idempotent clarify (one action per
+source capture). Adversarially reviewed (17 confirmed findings fixed); all flows verified
+in-browser including the v1→v2 IndexedDB upgrade.
+
 Health: `tsc` · `eslint` · `next build` (env-absent export) · 13 tests · live Supabase harness — all green.
 
 > Remaining step-5 confirmation: the browser end-to-end (magic-link sign-in → capture → cross-device
@@ -26,16 +36,18 @@ Health: `tsc` · `eslint` · `next build` (env-absent export) · 13 tests · liv
 
 ## What's next — pick one
 
-**A · Phase 2 — AI clarify + knowledge base. Recommended.** Propose→approve seam (HostedClaude),
-KB by GTD horizons. Now that captures sync to a real backend, there's real data to clarify against.
-Needs an Anthropic API key. Contract: [`docs/AI-CLARIFY-CONTRACT.md`](docs/AI-CLARIFY-CONTRACT.md).
+**A · Manual GTD engine, Slice 2 — Projects + Waiting-For. Recommended.** Projects (>1 action,
+outcome, "next action needed" invariant), Waiting-For (delegate + aging), and wiring clarify to
+them ("it's a project" / "delegate it"). Then Slice 3 = the guided **Weekly Review** — that
+completes the whole manual loop. Schema blueprint: [`docs/DATA-MODEL.md`](docs/DATA-MODEL.md).
 
-**B · Move to Vercel.** Backend + (soon) AI need server code GitHub Pages can't run, and the
-root host drops the `NEXT_PUBLIC_BASE_PATH` juggling. A natural next infra step (see note below).
+**B · Phase 3 — AI clarify + knowledge base.** The accelerant over the manual engine:
+propose→approve seam (HostedClaude), KB by GTD horizons. Needs an Anthropic API key.
+Contract: [`docs/AI-CLARIFY-CONTRACT.md`](docs/AI-CLARIFY-CONTRACT.md).
 
-**C · Phase 1 polish.** P1.5 original-audio capture, multi-tab hardening, full PWA icon set;
-plus the deferred backend hardening (route all writes through a SECURITY DEFINER path so a client
-can't direct-write its own rows' server fields — see [`0002`](supabase/migrations/0002_harden_captures.sql) header).
+**C · Infra/polish.** Move to Vercel (server code + drops the basePath juggling) · gtd-domain
+backend sync (mirror the capture spine's Supabase path) · P1.5 original-audio capture · full PWA
+icon set · deferred backend hardening (see [`0002`](supabase/migrations/0002_harden_captures.sql) header).
 
 > Hosting note: on GitHub Pages the app lives under `/mainline/`, so assets are
 > basePath-prefixed via `NEXT_PUBLIC_BASE_PATH`. That juggling disappears on a root host like

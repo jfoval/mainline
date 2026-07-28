@@ -3,12 +3,13 @@
 import { useState } from "react";
 import { discardCapture, editCapture, useCaptures } from "@/lib/capture/store";
 import type { Capture } from "@/lib/capture/types";
+import { ClarifyPanel } from "./ClarifyPanel";
 
-/** Inbox — every captured item, newest first, with edit + delete. Exercises the full
- *  op-log edit/delete + tombstone path end-to-end. */
+/** Inbox — items still awaiting clarification (status=inbox), newest first. Clarify moves an
+ *  item to processed/discarded so it leaves the inbox; edit + delete exercise the op-log too. */
 export function InboxList() {
   const captures = useCaptures();
-  const items = captures.filter((c) => c.status !== "discarded");
+  const items = captures.filter((c) => c.status === "inbox");
 
   if (items.length === 0) {
     return (
@@ -32,6 +33,7 @@ export function InboxList() {
 
 function CaptureRow({ capture }: { capture: Capture }) {
   const [editing, setEditing] = useState(false);
+  const [clarifying, setClarifying] = useState(false);
   const [draft, setDraft] = useState(capture.raw_text);
 
   const startEditing = () => {
@@ -101,6 +103,14 @@ function CaptureRow({ capture }: { capture: Capture }) {
             <div className="flex items-center gap-1">
               <button
                 type="button"
+                onClick={() => setClarifying((v) => !v)}
+                aria-expanded={clarifying}
+                className="rounded-md px-2 py-1 text-accent-link hover:bg-surface-2"
+              >
+                {clarifying ? "Close" : "Clarify"}
+              </button>
+              <button
+                type="button"
                 onClick={startEditing}
                 className="rounded-md px-2 py-1 hover:bg-surface-2 hover:text-foreground"
               >
@@ -115,6 +125,13 @@ function CaptureRow({ capture }: { capture: Capture }) {
               </button>
             </div>
           </div>
+          {clarifying && (
+            <ClarifyPanel
+              clientId={capture.client_id}
+              rawText={capture.raw_text}
+              onDone={() => setClarifying(false)}
+            />
+          )}
         </div>
       )}
     </li>

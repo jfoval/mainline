@@ -245,15 +245,24 @@ plan-blocks to the dedicated calendar; (3) opt-in promotion + defense-level tuni
 
 ## 10. Build sequence
 
-Full product, sequenced by dependency (each phase = a complete vertical slice we deepen):
+Full product, sequenced by dependency (each phase = a complete vertical slice we deepen).
+
+> **Reordered 2026-06-30:** the manual GTD engine (old steps 3–4) now comes *before* AI (old
+> step 2). Rationale, straight from §4: the app must work fully with AI off, so the hand-driven
+> clarify/organize/review system IS the product and AI is only an accelerant layered on top.
+> Clarify also has nowhere to put its output until Organize (projects/actions/contexts) exists —
+> the AI-clarify contract even takes those as input. So we build the complete manual loop first.
 
 1. **Capture + inbox + backend** — local-first capture (voice + text) syncing to
-   Supabase. Prove the 2-second promise.
-2. **AI clarify + knowledge base** — onboarding seeds KB by horizon; provider seam with
-   HostedClaude; propose→approve.
-3. **Organize** — projects, next actions, contexts, waiting-for, someday/maybe.
-4. **Guided weekly review** — the keystone habit as an enforced flow.
-5. **Engage views + multi-device polish + open capture endpoints** (Shortcuts,
+   Supabase. Prove the 2-second promise. ✅ **DONE** (Phase 1, steps 1–5).
+2. **Manual GTD engine (clarify + organize + reflect)** — hand-driven, AI-off: clarify inbox
+   items into next actions (2-min rule; trash / someday / reference); projects (>1 action);
+   next actions by **context**; waiting-for; someday/maybe; and the guided **weekly review**.
+   This is the complete-but-simple system — the whole loop working by hand.
+3. **AI clarify + knowledge base** — the *accelerant* over the manual engine: propose→approve
+   seam (HostedClaude), onboarding seeds the KB by horizon, AI proposes clarifications/KB
+   additions that the user one-tap approves.
+4. **Engage views + multi-device polish + open capture endpoints** (Shortcuts,
    share-sheet, watch).
 
 ---

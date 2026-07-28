@@ -10,11 +10,22 @@
  * flush can write PII back), THEN wipe IndexedDB, THEN drop the db handle so the next account
  * opens a truly fresh database.
  */
+import { clearGtdData, resetGtdDbHandle, resetGtdStore } from "@/lib/gtd/store";
 import { clearAllData, resetDbHandle } from "./db";
 import { resetLocalStore } from "./store";
 
 export async function clearLocalData(): Promise<void> {
   resetLocalStore(); // stop engine, drop listeners, bump generation, clear memory
-  await clearAllData(); // wipe every IndexedDB store
-  await resetDbHandle(); // close + forget the handle
+  resetGtdStore(); // clear the organize (actions/contexts) in-memory view too
+  // The two databases are independent — wipe both best-effort so a failure in one never leaves
+  // the other's PII on disk, then close both handles, then surface the first failure (AuthGate
+  // shows the error state rather than revealing the app over a half-cleared device).
+  const wipes = await Promise.allSettled([clearAllData(), clearGtdData()]);
+  await Promise.allSettled([resetDbHandle(), resetGtdDbHandle()]);
+  // Belt-and-braces: re-bump generations AFTER the wipes so any write that slipped into the
+  // window while the app was still interactive is discarded and its generation invalidated.
+  resetLocalStore();
+  resetGtdStore();
+  const failed = wipes.find((r) => r.status === "rejected");
+  if (failed) throw (failed as PromiseRejectedResult).reason;
 }

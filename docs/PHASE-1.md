@@ -1,10 +1,12 @@
 # Phase 1 — Capture + Inbox + Backend (build plan)
 
-> **STATUS (2026-06-30):** Steps 1–4 ✅ **done** — built, adversarially reviewed (12 bugs
-> fixed), Vitest-tested, branded, themed, and deployed live on a `LocalOnlyAdapter` (no
-> backend). **Step 5 (Supabase) is the next build step:** the migration + FORCE RLS +
-> idempotent sync RPC are drafted in [`../supabase/migrations/0001_phase1_captures.sql`](../supabase/migrations/0001_phase1_captures.sql);
-> follow [`PHASE-1-SUPABASE.md`](PHASE-1-SUPABASE.md) to connect a project.
+> **STATUS (2026-07-01): PHASE 1 COMPLETE — all 5 steps ✅.** Steps 1–4: built, adversarially
+> reviewed (12 bugs fixed), Vitest-tested, branded, themed. Step 5: live Supabase backend —
+> migrations `0001`+`0002` applied, magic-link auth + env-gated `SupabaseAdapter`, trust-spine
+> invariants + RLS isolation proven against real Postgres by `scripts/verify-supabase.mjs`
+> (details: [`PHASE-1-SUPABASE.md`](PHASE-1-SUPABASE.md)). The app runs fully offline on
+> `LocalOnlyAdapter` whenever env is absent (e.g. the GitHub Pages build).
+> **Phase 2 (the manual GTD engine) is underway — see the README's "What's next".**
 
 > The first thing to build. Goal: a **bulletproof capture trust spine** — idea → captured
 > in <2s, voice or text, fully offline, never lost or duplicated — plus an inbox and a

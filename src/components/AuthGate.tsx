@@ -47,9 +47,12 @@ function Gated({ children }: { children: React.ReactNode }) {
       const last = localStorage.getItem(LAST_UID_KEY);
       if (last !== uid) {
         // Account switch or sign-out. Wipe local PII BEFORE revealing the app or advancing the
-        // stored uid. If the wipe FAILS, never reveal (could surface the prior account's data) —
-        // land on a recoverable error instead of hanging on "Loading…".
+        // stored uid. Unmount the app first (status: loading) so nothing stays interactive while
+        // the wipe runs — a mid-wipe click could otherwise write into the half-cleared stores.
+        // If the wipe FAILS, never reveal (could surface the prior account's data) — land on a
+        // recoverable error instead of hanging on "Loading…".
         if (last) {
+          if (active) setState({ status: "loading" });
           try {
             await clearLocalData();
           } catch {

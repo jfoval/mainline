@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation";
 const items = [
   { href: "/", label: "Capture" },
   { href: "/inbox", label: "Inbox" },
+  { href: "/next", label: "Next" },
+  { href: "/someday", label: "Someday" },
 ];
 
 /** Header nav. The active route is the only blue here; inactive items stay monochrome. */

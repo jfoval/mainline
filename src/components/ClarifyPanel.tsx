@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { discardCapture, setCaptureStatus } from "@/lib/capture/store";
+import { cancelDiscard, commitDiscard, deferDiscard } from "@/lib/capture/pending-discard";
+import { setCaptureStatus } from "@/lib/capture/store";
 import { createAction, createProject, createReference, useContexts } from "@/lib/gtd/store";
-import type { Context } from "@/lib/gtd/types";
+import { showUndo } from "@/lib/undo";
+import { ContextChips } from "./ContextChips";
 
 /**
  * The heart of GTD: clarify ONE inbox item. Actionable? → a next action (with a context),
@@ -61,7 +63,14 @@ export function ClarifyPanel({
 
   const trash = () =>
     run(async () => {
-      await discardCapture(clientId); // discard IS the outcome — no organize write to gate on
+      // Deferred: the capture tombstone is terminal once shipped, so the real discard only
+      // commits after the undo window. Meanwhile pending-discard hides it from the inbox.
+      deferDiscard(clientId);
+      showUndo({
+        label: "Capture trashed",
+        onUndo: () => cancelDiscard(clientId),
+        onExpire: () => commitDiscard(clientId),
+      });
       return true;
     });
   const someday = () =>
@@ -289,38 +298,6 @@ export function ClarifyPanel({
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function ContextChips({
-  contexts,
-  contextId,
-  onSelect,
-}: {
-  contexts: readonly Context[];
-  contextId: string | null;
-  onSelect: (id: string) => void;
-}) {
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {contexts.map((c) => {
-        const active = c.id === contextId;
-        return (
-          <button
-            key={c.id}
-            type="button"
-            onClick={() => onSelect(c.id)}
-            className={
-              active
-                ? "rounded-full border border-accent px-3 py-1 text-sm text-accent-link"
-                : "rounded-full border border-border px-3 py-1 text-sm text-muted transition-colors hover:text-foreground"
-            }
-          >
-            {c.name}
-          </button>
-        );
-      })}
     </div>
   );
 }

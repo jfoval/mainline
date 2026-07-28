@@ -386,6 +386,63 @@ export async function createProject(input: {
   }
 }
 
+/** Rename a project (title IS the outcome statement). Returns false on write failure. */
+export async function updateProjectTitle(id: string, title: string): Promise<boolean> {
+  const cur = projects.get(id);
+  const trimmed = title.trim();
+  if (!cur || !trimmed || cur.title === trimmed) return cur != null;
+  const gen = generation;
+  try {
+    const next: Project = { ...cur, title: trimmed, updated_at: nowIso() };
+    await putRowWithOutbox("projects", next);
+    if (gen !== generation) return false;
+    projects.set(id, next);
+    notify();
+    broadcast();
+    gtdSync.requestFlush();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Put back a prior snapshot of an action (the Undo path — restores EVERY field, e.g. the
+ * waiting metadata that a status change cleared). Fresh updated_at so the restore wins LWW.
+ */
+export async function restoreAction(prev: Action): Promise<boolean> {
+  const gen = generation;
+  try {
+    const next: Action = { ...prev, updated_at: nowIso() };
+    await putRowWithOutbox("actions", next);
+    if (gen !== generation) return false;
+    actions.set(next.id, next);
+    notify();
+    broadcast();
+    gtdSync.requestFlush();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Put back a prior snapshot of a project (the Undo path). */
+export async function restoreProject(prev: Project): Promise<boolean> {
+  const gen = generation;
+  try {
+    const next: Project = { ...prev, updated_at: nowIso() };
+    await putRowWithOutbox("projects", next);
+    if (gen !== generation) return false;
+    projects.set(next.id, next);
+    notify();
+    broadcast();
+    gtdSync.requestFlush();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Set a project's status. Returns false if the durable write couldn't happen. */
 export async function setProjectStatus(id: string, status: ProjectStatus): Promise<boolean> {
   const cur = projects.get(id);

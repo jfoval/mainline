@@ -1,15 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { discardCapture, editCapture, useCaptures } from "@/lib/capture/store";
+import {
+  cancelDiscard,
+  commitDiscard,
+  deferDiscard,
+  usePendingDiscards,
+} from "@/lib/capture/pending-discard";
+import { editCapture, useCaptures } from "@/lib/capture/store";
 import type { Capture } from "@/lib/capture/types";
+import { showUndo } from "@/lib/undo";
 import { ClarifyPanel } from "./ClarifyPanel";
 
 /** Inbox — items still awaiting clarification (status=inbox), newest first. Clarify moves an
- *  item to processed/discarded so it leaves the inbox; edit + delete exercise the op-log too. */
+ *  item to processed/discarded so it leaves the inbox; edit + delete exercise the op-log too.
+ *  Deletes are deferred behind the Undo toast (the sync tombstone is irreversible once shipped),
+ *  so pending ones are hidden here rather than already gone. */
 export function InboxList() {
   const captures = useCaptures();
-  const items = captures.filter((c) => c.status === "inbox");
+  const pendingDeletes = usePendingDiscards();
+  const items = captures.filter((c) => c.status === "inbox" && !pendingDeletes.has(c.client_id));
 
   if (items.length === 0) {
     return (
@@ -46,10 +56,16 @@ function CaptureRow({ capture }: { capture: Capture }) {
     setEditing(false);
   };
 
-  const remove = async () => {
-    if (window.confirm("Delete this capture?")) {
-      await discardCapture(capture.client_id);
-    }
+  const remove = () => {
+    // No confirm dialog — the Undo toast IS the safety net. The discard op only ships when the
+    // toast expires (its tombstone is terminal), so Undo can bring the capture straight back.
+    const id = capture.client_id;
+    deferDiscard(id);
+    showUndo({
+      label: "Capture deleted",
+      onUndo: () => cancelDiscard(id),
+      onExpire: () => commitDiscard(id),
+    });
   };
 
   return (
@@ -118,7 +134,7 @@ function CaptureRow({ capture }: { capture: Capture }) {
               </button>
               <button
                 type="button"
-                onClick={() => void remove()}
+                onClick={remove}
                 className="rounded-md px-2 py-1 hover:bg-danger/10 hover:text-danger"
               >
                 Delete

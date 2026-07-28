@@ -1,7 +1,8 @@
 "use client";
 
-import { setActionStatus, useActions } from "@/lib/gtd/store";
+import { restoreAction, setActionStatus, useActions } from "@/lib/gtd/store";
 import { waitingAgeLabel } from "@/lib/gtd/views";
+import { showUndo } from "@/lib/undo";
 
 /**
  * Waiting For — delegated or blocked items, oldest first so aging ones surface (the GTD
@@ -34,7 +35,12 @@ export function WaitingList() {
             type="button"
             aria-label="Mark done"
             // Never rejects (returns false on write failure); on failure the row simply stays.
-            onClick={() => void setActionStatus(a.id, "done")}
+            // Undo restores the full prior row — including the waiting metadata this clears.
+            onClick={() => {
+              const prev = { ...a };
+              void setActionStatus(a.id, "done");
+              showUndo({ label: "Marked done", onUndo: () => void restoreAction(prev) });
+            }}
             className="mt-0.5 h-5 w-5 shrink-0 rounded-full border border-border-strong transition-colors hover:border-accent hover:bg-accent/10"
           />
           <div className="flex flex-1 flex-col">
@@ -46,7 +52,11 @@ export function WaitingList() {
           </div>
           <button
             type="button"
-            onClick={() => void setActionStatus(a.id, "active")}
+            onClick={() => {
+              const prev = { ...a };
+              void setActionStatus(a.id, "active");
+              showUndo({ label: "Moved to Next Actions", onUndo: () => void restoreAction(prev) });
+            }}
             className="shrink-0 rounded-lg border border-border px-3 py-1.5 text-sm text-muted transition-colors hover:border-border-strong hover:text-foreground"
           >
             My move now

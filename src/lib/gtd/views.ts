@@ -37,6 +37,28 @@ export function currentActionFor(projectId: string, actions: readonly Action[]):
   return best;
 }
 
+/** A project's open items (active + waiting), oldest first — the nested checklist order. */
+export function openActionsFor(projectId: string, actions: readonly Action[]): Action[] {
+  return actions
+    .filter((a) => a.project_id === projectId && isActionable(a))
+    .sort((a, b) => a.sort_order - b.sort_order);
+}
+
+/** Progress line numbers: done vs. everything still standing (dropped items don't count). */
+export function projectProgress(
+  projectId: string,
+  actions: readonly Action[],
+): { done: number; total: number } {
+  let done = 0;
+  let total = 0;
+  for (const a of actions) {
+    if (a.project_id !== projectId || a.status === "dropped") continue;
+    total++;
+    if (a.status === "done") done++;
+  }
+  return { done, total };
+}
+
 /** "today" / "1 day" / "N days" since the given ISO timestamp — Waiting-For aging. */
 export function waitingAgeLabel(sinceIso: string, now: Date): string {
   const since = new Date(sinceIso).getTime();

@@ -7,6 +7,7 @@ import { AuthStatus } from "@/components/AuthStatus";
 import { BottomNav } from "@/components/BottomNav";
 import { MainNav } from "@/components/MainNav";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
+import { UndoToast } from "@/components/UndoToast";
 
 // basePath-aware asset prefix ("" locally, "/mainline" on GitHub Pages). The manifest link is
 // injected automatically from app/manifest.ts (already basePath-aware), so it's omitted here.
@@ -73,6 +74,7 @@ export default function RootLayout({
           <AuthGate>{children}</AuthGate>
         </main>
         <BottomNav />
+        <UndoToast />
         <ServiceWorkerRegistrar />
       </body>
     </html>

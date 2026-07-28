@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { Action, Project } from "./types";
-import { currentActionFor, projectNeedsNextAction, waitingAgeLabel } from "./views";
+import {
+  currentActionFor,
+  openActionsFor,
+  projectNeedsNextAction,
+  projectProgress,
+  waitingAgeLabel,
+} from "./views";
 
 function action(overrides: Partial<Action>): Action {
   return {
@@ -92,6 +98,33 @@ describe("currentActionFor", () => {
     ];
     expect(currentActionFor("p1", acts)?.id).toBe("w1");
     expect(currentActionFor("p2", acts)).toBeNull();
+  });
+});
+
+describe("openActionsFor", () => {
+  it("returns active + waiting items for the project, oldest first, skipping done/dropped", () => {
+    const acts = [
+      action({ id: "new", project_id: "p1", status: "active", sort_order: 30 }),
+      action({ id: "w", project_id: "p1", status: "waiting", sort_order: 20 }),
+      action({ id: "old", project_id: "p1", status: "active", sort_order: 10 }),
+      action({ id: "d", project_id: "p1", status: "done", sort_order: 5 }),
+      action({ id: "other", project_id: "p2", status: "active", sort_order: 1 }),
+    ];
+    expect(openActionsFor("p1", acts).map((a) => a.id)).toEqual(["old", "w", "new"]);
+  });
+});
+
+describe("projectProgress", () => {
+  it("counts done vs standing items and ignores dropped ones", () => {
+    const acts = [
+      action({ id: "a", project_id: "p1", status: "done" }),
+      action({ id: "b", project_id: "p1", status: "active" }),
+      action({ id: "c", project_id: "p1", status: "waiting" }),
+      action({ id: "x", project_id: "p1", status: "dropped" }),
+      action({ id: "o", project_id: "p2", status: "done" }),
+    ];
+    expect(projectProgress("p1", acts)).toEqual({ done: 1, total: 3 });
+    expect(projectProgress("empty", acts)).toEqual({ done: 0, total: 0 });
   });
 });
 

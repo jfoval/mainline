@@ -1,7 +1,8 @@
 "use client";
 
-import { setActionStatus, useActions, useContexts, useProjects } from "@/lib/gtd/store";
+import { restoreAction, setActionStatus, useActions, useContexts, useProjects } from "@/lib/gtd/store";
 import type { Action, Context } from "@/lib/gtd/types";
+import { showUndo } from "@/lib/undo";
 
 /**
  * Next Actions — what you can actually do, grouped by context (GTD's "engage" filter). Check one
@@ -60,7 +61,11 @@ function ActionRow({ action, projectTitle }: { action: Action; projectTitle?: st
         aria-label="Mark done"
         // setActionStatus never rejects (returns false on write failure, leaving the row as-is),
         // so fire-and-forget is safe: on failure the item simply stays visible.
-        onClick={() => void setActionStatus(action.id, "done")}
+        onClick={() => {
+          const prev = { ...action };
+          void setActionStatus(action.id, "done");
+          showUndo({ label: "Marked done", onUndo: () => void restoreAction(prev) });
+        }}
         className="mt-0.5 h-5 w-5 shrink-0 rounded-full border border-border-strong transition-colors hover:border-accent hover:bg-accent/10"
       />
       <div className="flex flex-1 flex-col">

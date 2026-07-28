@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { captureText, useCaptures } from "@/lib/capture/store";
 import { createDictation, isSpeechSupported, type Dictation } from "@/lib/speech";
+import { isSupabaseEnabled } from "@/lib/supabase/client";
 import { useHydrated } from "@/lib/use-hydrated";
 import { useOnline } from "@/lib/use-online";
 
@@ -159,6 +160,10 @@ function StatusLine({
   if (justCaptured) {
     label = "Captured ✓";
     tone = "text-foreground";
+  } else if (!isSupabaseEnabled()) {
+    // Backend-off build: nothing syncs anywhere — don't claim it does.
+    label = "Saved on this device";
+    tone = "text-muted";
   } else if (!online && pending > 0) {
     label = `Offline · ${pending} saved locally, will sync`;
     tone = "text-muted";

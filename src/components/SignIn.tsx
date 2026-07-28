@@ -87,7 +87,7 @@ export function SignIn() {
       <div className="text-center">
         <h1 className="text-2xl font-semibold tracking-tight">Sign in to Mainline</h1>
         <p className="mt-1 text-sm text-muted">
-          Sync your captures across devices. No password — we email you a link.
+          Your whole system syncs across your devices. No password — we email you a link.
         </p>
       </div>
       <form onSubmit={submit} className="flex flex-col gap-3">

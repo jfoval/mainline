@@ -2,14 +2,17 @@
 
 import { useState } from "react";
 import { clearLocalData } from "@/lib/capture/session";
+import { isSupabaseEnabled } from "@/lib/supabase/client";
 
 /**
- * Dev/shared-device affordance: wipe ALL local capture data (the logout / account-switch
- * PII-clear path from DATA-MODEL §Data lifecycle). With no auth yet in Phase 1, this is the
- * only UI caller of clearLocalData — it also makes invariant 6 manually verifiable.
+ * Wipe ALL local data on this device (the same PII-clear path sign-out runs). Only rendered in
+ * backend-off builds (offline demo / self-host / dev), where there is no sign-out and this is
+ * the one way to clear a device before handing it on. In the signed-in product it's hidden —
+ * "Sign out" does this job safely, and a stray tap here would also erase not-yet-synced edits.
  */
 export function ResetLocalDataButton() {
   const [working, setWorking] = useState(false);
+  if (isSupabaseEnabled()) return null;
 
   const onReset = async () => {
     if (!window.confirm("Erase all locally stored captures on this device? This cannot be undone.")) {

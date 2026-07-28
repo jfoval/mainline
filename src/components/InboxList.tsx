@@ -9,6 +9,7 @@ import {
 } from "@/lib/capture/pending-discard";
 import { editCapture, useCaptures } from "@/lib/capture/store";
 import type { Capture } from "@/lib/capture/types";
+import { isSupabaseEnabled } from "@/lib/supabase/client";
 import { showUndo } from "@/lib/undo";
 import { ClarifyPanel } from "./ClarifyPanel";
 
@@ -161,7 +162,7 @@ function SyncBadge({ pending }: { pending: boolean }) {
         className={`h-1.5 w-1.5 rounded-full ${pending ? "bg-warning" : "bg-success"}`}
         aria-hidden
       />
-      {pending ? "Saving…" : "Synced"}
+      {pending ? "Saving…" : isSupabaseEnabled() ? "Synced" : "Saved"}
     </span>
   );
 }

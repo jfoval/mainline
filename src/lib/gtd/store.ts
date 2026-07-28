@@ -46,8 +46,13 @@ const EMPTY_ACTIONS: readonly Action[] = Object.freeze([]);
 const EMPTY_CONTEXTS: readonly Context[] = Object.freeze([]);
 const EMPTY_PROJECTS: readonly Project[] = Object.freeze([]);
 let actionsSnap: readonly Action[] = EMPTY_ACTIONS;
+/** Active (non-archived) contexts — what every picker and list shows. */
 let contextsSnap: readonly Context[] = EMPTY_CONTEXTS;
 let projectsSnap: readonly Project[] = EMPTY_PROJECTS;
+
+/** Seeds carry the EPOCH clock: a fresh device re-seeding defaults must never win LWW against a
+ *  real edit synced from another device (e.g. a rename or archive of "@home"). */
+const SEED_UPDATED_AT = "1970-01-01T00:00:00.000Z";
 
 let initialized = false;
 let initPromise: Promise<void> | null = null;
@@ -112,12 +117,15 @@ function rebuild(): void {
     [...actions.values()].sort((a, b) => b.sort_order - a.sort_order),
   );
   contextsSnap = Object.freeze(
-    [...contexts.values()].sort((a, b) => a.sort_order - b.sort_order),
+    [...contexts.values()]
+      .filter((c) => !c.archived)
+      .sort((a, b) => a.sort_order - b.sort_order),
   );
   projectsSnap = Object.freeze(
     [...projects.values()].sort((a, b) => b.sort_order - a.sort_order),
   );
 }
+
 
 function notify(): void {
   rebuild();
@@ -140,13 +148,13 @@ async function loadOrSeedContexts(db: Awaited<ReturnType<typeof getGtdDB>>): Pro
     await tx.done;
     return existing;
   }
-  const now = nowIso();
   const seeded: Context[] = DEFAULT_CONTEXTS.map((c, i) => ({
     id: c.id,
     name: c.name,
     type: c.type,
     sort_order: i,
-    updated_at: now,
+    archived: false,
+    updated_at: SEED_UPDATED_AT,
   }));
   const outbox = tx.objectStore("outbox");
   await Promise.all([
@@ -336,6 +344,97 @@ export async function setActionStatus(id: string, status: ActionStatus): Promise
     return true;
   } catch {
     return false; // in-memory untouched (durable-first); UI simply keeps the current state
+  }
+}
+
+/**
+ * Create a context. Returns the existing active context when the (case-insensitive) name is
+ * already taken — "add @home twice" merges instead of duplicating. Null on write failure.
+ */
+export async function createContext(name: string): Promise<Context | null> {
+  const trimmed = name.trim();
+  if (!trimmed || !isGtdStorageAvailable()) return null;
+  const gen = generation;
+  try {
+    await ensureInit();
+    if (gen !== generation) return null;
+    const existing = [...contexts.values()].find(
+      (c) => !c.archived && c.name.toLowerCase() === trimmed.toLowerCase(),
+    );
+    if (existing) return existing;
+    const context: Context = {
+      id: uuid(),
+      name: trimmed,
+      type: "custom",
+      sort_order: Math.max(0, ...[...contexts.values()].map((c) => c.sort_order)) + 1,
+      archived: false,
+      updated_at: nowIso(),
+    };
+    await putRowWithOutbox("contexts", context);
+    if (gen !== generation) return null;
+    contexts.set(context.id, context);
+    notify();
+    broadcast();
+    gtdSync.requestFlush();
+    return context;
+  } catch {
+    return null;
+  }
+}
+
+/** Rename a context. Returns false on write failure. */
+export async function renameContext(id: string, name: string): Promise<boolean> {
+  const cur = contexts.get(id);
+  const trimmed = name.trim();
+  if (!cur || !trimmed || cur.name === trimmed) return cur != null;
+  const gen = generation;
+  try {
+    const next: Context = { ...cur, name: trimmed, updated_at: nowIso() };
+    await putRowWithOutbox("contexts", next);
+    if (gen !== generation) return false;
+    contexts.set(id, next);
+    notify();
+    broadcast();
+    gtdSync.requestFlush();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Archive (soft-delete) a context — its actions fold into "No context", nothing is lost. */
+export async function archiveContext(id: string): Promise<boolean> {
+  const cur = contexts.get(id);
+  if (!cur || cur.archived) return cur != null;
+  const gen = generation;
+  try {
+    const next: Context = { ...cur, archived: true, updated_at: nowIso() };
+    await putRowWithOutbox("contexts", next);
+    if (gen !== generation) return false;
+    contexts.set(id, next);
+    notify();
+    broadcast();
+    gtdSync.requestFlush();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Put back a prior snapshot of a context (the Undo path for archive). */
+export async function restoreContext(prev: Context): Promise<boolean> {
+  const gen = generation;
+  try {
+    const next: Context = { ...prev, updated_at: nowIso() };
+    await putRowWithOutbox("contexts", next);
+    if (gen !== generation) return false;
+    contexts.set(next.id, next);
+    notify();
+    broadcast();
+    gtdSync.requestFlush();
+    return true;
+  } catch {
+    return false;
   }
 }
 

@@ -145,7 +145,7 @@ async function main() {
     source_capture_id: null, created_at: t1, updated_at: t1, sort_order: 2,
   };
   const push1 = [
-    { table: "contexts", row: { id: ctxId, name: "@computer", type: "tool", sort_order: 1, updated_at: t1 } },
+    { table: "contexts", row: { id: ctxId, name: "@computer", type: "tool", sort_order: 1, archived: false, updated_at: t1 } },
     { table: "projects", row: { id: projId, title: "Verify project", status: "active", source_capture_id: null, created_at: t1, updated_at: t1, sort_order: 1 } },
     { table: "actions", row: actionRow },
   ];
@@ -178,6 +178,16 @@ async function main() {
     "newer push applied + returned by incremental pull",
     pulled4.length === 1 && pulled4[0].row.title === "fresher title",
     JSON.stringify(pulled4.map((c) => c.row.title)),
+  );
+
+  const gArch = await A.client.rpc("sync_gtd", {
+    p_changes: [{ table: "contexts", row: { id: ctxId, name: "@computer", type: "tool", sort_order: 1, archived: true, updated_at: t2 } }],
+    p_since: seq1,
+  });
+  check(
+    "context archive (soft delete) propagates",
+    !gArch.error && (gArch.data?.rows ?? []).some((c) => c.table === "contexts" && c.row.archived === true),
+    gArch.error?.message,
   );
 
   const g5 = await A.client.rpc("sync_gtd", {

@@ -17,7 +17,7 @@ import { normalizeIso, shouldAdopt } from "./sync-merge";
 import { DEFAULT_CONTEXTS, type Action, type Context, type Project, type ReferenceItem } from "./types";
 
 const DB_NAME = "gtd-organize";
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 /** Server-side table names. The references store predates the server naming — map via STORE_OF. */
 export type GtdTable = "contexts" | "projects" | "actions" | "reference_items";
@@ -144,6 +144,14 @@ export function getGtdDB(): Promise<GtdDB> {
             for (const id of await tx.objectStore(storeName).getAllKeys()) {
               await outbox.put({ key: `${table}:${id}`, table, id });
             }
+          }
+        }
+        if (oldVersion < 5) {
+          // Contexts become user-editable; archived = soft delete (see types.ts). Backfill false.
+          let cur = await tx.objectStore("contexts").openCursor();
+          while (cur) {
+            await cur.update({ ...cur.value, archived: cur.value.archived ?? false });
+            cur = await cur.continue();
           }
         }
       },

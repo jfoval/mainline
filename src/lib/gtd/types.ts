@@ -21,6 +21,9 @@ export interface Context {
   name: string;
   type: ContextType;
   sort_order: number;
+  /** Soft delete — sync can't hard-delete (LWW would resurrect the row from another device),
+   *  so removal is an archived flag that propagates like any other edit. */
+  archived: boolean;
   /** LWW clock for sync (newest row wins across devices). */
   updated_at: string;
 }

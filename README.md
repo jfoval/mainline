@@ -38,6 +38,14 @@ and **Waiting** (oldest first; resolve as done or "my move now" → Next). Next-
 their project. IndexedDB v2→v3 (projects store + waiting-field backfill). Verified end-to-end
 in-browser (project clarify → stall → re-action; waiting → resolve), zero console errors.
 
+**Mobile-first pass (2026-07-28):** navigation is a bottom tab bar on phones (safe-area aware;
+header = logo + sign-out only), top nav on desktop — fixes the nav-over-logo overflow on the
+live site. Mic button is a 44px target and dictation errors surface as plain-language hints.
+The deploy workflow now forwards `NEXT_PUBLIC_SUPABASE_URL/_ANON_KEY` from **repo secrets** —
+once set, the public URL becomes the real signed-in app (magic link + capture sync); while
+unset it stays the offline demo. To flip it on: `gh secret set` both vars, allow-list
+`https://jfoval.github.io/mainline/` in Supabase Auth → URL Configuration, re-run deploy.
+
 Health: `tsc` · `eslint` · `next build` (env-absent export) · 25 tests · live Supabase harness — all green.
 
 > Remaining step-5 confirmation: the browser end-to-end (magic-link sign-in → capture → cross-device
@@ -45,10 +53,16 @@ Health: `tsc` · `eslint` · `next build` (env-absent export) · 25 tests · liv
 
 ## What's next — pick one
 
-**A · Manual GTD engine, Slice 3 — the guided Weekly Review. Recommended.** The keystone habit
-(FOUNDATIONS §2): a step-by-step flow — empty the inbox, review projects for stalls, age the
-Waiting-For list, re-decide stale Someday items. This completes the whole manual loop. Review
-queries are already sketched in [`docs/DATA-MODEL.md`](docs/DATA-MODEL.md) §review.
+**A · GTD-domain backend sync. Recommended — the user's cross-device ask.** Actions, projects,
+contexts, references currently live per-device (IndexedDB only); captures already sync. Mirror
+the proven capture spine (op-log RPC or version-guarded rows per DATA-MODEL) so clarifying on
+the phone shows up on the laptop. This is the gap between "capture anywhere, process at a desk"
+(works today) and "one system on every device" (the product promise).
+
+**A2 · Manual GTD engine, Slice 3 — the guided Weekly Review.** The keystone habit
+(FOUNDATIONS §2): empty the inbox, review projects for stalls, age the Waiting-For list,
+re-decide stale Someday items — completes the manual loop. Queries sketched in
+[`docs/DATA-MODEL.md`](docs/DATA-MODEL.md) §review.
 
 **B · Phase 3 — AI clarify + knowledge base.** The accelerant over the manual engine:
 propose→approve seam (HostedClaude), KB by GTD horizons. Needs an Anthropic API key.

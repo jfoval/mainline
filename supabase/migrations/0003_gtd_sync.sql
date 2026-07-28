@@ -278,8 +278,10 @@ begin
 
   -- Pull: everything of mine that changed after the client's watermark, whoever changed it
   -- (including rows this very call just applied — the client's LWW merge no-ops on echoes).
+  -- Aliases must not collide with this function's variables (t, r) — PL/pgSQL treats an
+  -- unqualified identifier in SQL as either, and errors on the ambiguity (42702).
   with changed as (
-    select 'contexts' as t, pg_catalog.to_jsonb(c) - 'user_id' - 'server_seq' as r, c.server_seq
+    select 'contexts' as tbl_name, pg_catalog.to_jsonb(c) - 'user_id' - 'server_seq' as row_data, c.server_seq
       from public.contexts c where c.user_id = uid and c.server_seq > p_since
     union all
     select 'projects', pg_catalog.to_jsonb(p) - 'user_id' - 'server_seq', p.server_seq
@@ -292,7 +294,7 @@ begin
       from public.reference_items ri where ri.user_id = uid and ri.server_seq > p_since
   )
   select
-    coalesce(pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('table', t, 'row', r) order by server_seq), '[]'::jsonb),
+    coalesce(pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('table', tbl_name, 'row', row_data) order by server_seq), '[]'::jsonb),
     coalesce(pg_catalog.max(server_seq), p_since)
   into v_rows, v_max
   from changed;

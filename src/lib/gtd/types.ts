@@ -21,7 +21,26 @@ export interface Context {
   name: string;
   type: ContextType;
   sort_order: number;
+  /** LWW clock for sync (newest row wins across devices). */
+  updated_at: string;
 }
+
+/**
+ * GTD's default contexts, seeded on first run. Ids are CANONICAL constants — every device seeds
+ * the exact same rows, so cross-device sync merges them instead of duplicating "@home" per device.
+ */
+export const DEFAULT_CONTEXTS: ReadonlyArray<{
+  id: string;
+  name: string;
+  type: ContextType;
+}> = [
+  { id: "6fb2a1c0-0000-4000-8000-000000000001", name: "@home", type: "location" },
+  { id: "6fb2a1c0-0000-4000-8000-000000000002", name: "@computer", type: "tool" },
+  { id: "6fb2a1c0-0000-4000-8000-000000000003", name: "@phone", type: "tool" },
+  { id: "6fb2a1c0-0000-4000-8000-000000000004", name: "@errands", type: "location" },
+  { id: "6fb2a1c0-0000-4000-8000-000000000005", name: "@online", type: "tool" },
+  { id: "6fb2a1c0-0000-4000-8000-000000000006", name: "@anywhere", type: "custom" },
+];
 
 /** A next action — the thing you actually DO (DATA-MODEL §actions). Title is verb-first. */
 export interface Action {
@@ -70,4 +89,6 @@ export interface ReferenceItem {
   body: string | null;
   source_capture_id: string | null;
   created_at: string;
+  /** LWW clock for sync (newest row wins across devices). */
+  updated_at: string;
 }

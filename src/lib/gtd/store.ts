@@ -16,20 +16,25 @@
  *     the action write and the capture status change can't produce duplicates on re-clarify.
  */
 import { useEffect, useSyncExternalStore } from "react";
+import { isSupabaseEnabled } from "@/lib/supabase/client";
 import {
   clearGtdData,
   getGtdDB,
   isGtdStorageAvailable,
+  putRowWithOutbox,
   resetGtdDbHandle,
+  type GtdChange,
 } from "./db";
-import type {
-  Action,
-  ActionStatus,
-  Context,
-  Energy,
-  Project,
-  ProjectStatus,
-  ReferenceItem,
+import { gtdSync } from "./sync";
+import {
+  DEFAULT_CONTEXTS,
+  type Action,
+  type ActionStatus,
+  type Context,
+  type Energy,
+  type Project,
+  type ProjectStatus,
+  type ReferenceItem,
 } from "./types";
 
 const contexts = new Map<string, Context>();
@@ -102,16 +107,6 @@ async function reloadFromDb(): Promise<void> {
   }
 }
 
-/** GTD's default contexts — the "where/with-what can I do this" filters. User-editable later. */
-const DEFAULT_CONTEXTS: ReadonlyArray<{ name: string; type: Context["type"] }> = [
-  { name: "@home", type: "location" },
-  { name: "@computer", type: "tool" },
-  { name: "@phone", type: "tool" },
-  { name: "@errands", type: "location" },
-  { name: "@online", type: "tool" },
-  { name: "@anywhere", type: "custom" },
-];
-
 function rebuild(): void {
   actionsSnap = Object.freeze(
     [...actions.values()].sort((a, b) => b.sort_order - a.sort_order),
@@ -133,23 +128,34 @@ function notify(): void {
  * Load existing contexts, seeding defaults on first run. PURE with respect to module state —
  * returns rows, never mutates the maps (doInit applies them only after its generation check).
  * Check + write happen in ONE readwrite transaction: IndexedDB serializes overlapping readwrite
- * transactions on the same store across tabs, so two first-run tabs can't double-seed.
+ * transactions on the same store across tabs, so two first-run tabs can't double-seed. Seeds are
+ * dirty-marked in the same transaction so they reach the backend (canonical ids make every
+ * device's seed rows identical — the server upsert merges instead of duplicating).
  */
 async function loadOrSeedContexts(db: Awaited<ReturnType<typeof getGtdDB>>): Promise<Context[]> {
-  const tx = db.transaction("contexts", "readwrite");
+  const tx = db.transaction(["contexts", "outbox"], "readwrite");
   const store = tx.objectStore("contexts");
   const existing = await store.getAll();
   if (existing.length > 0) {
     await tx.done;
     return existing;
   }
+  const now = nowIso();
   const seeded: Context[] = DEFAULT_CONTEXTS.map((c, i) => ({
-    id: uuid(),
+    id: c.id,
     name: c.name,
     type: c.type,
     sort_order: i,
+    updated_at: now,
   }));
-  await Promise.all([...seeded.map((c) => store.put(c)), tx.done]);
+  const outbox = tx.objectStore("outbox");
+  await Promise.all([
+    ...seeded.map((c) => store.put(c)),
+    ...seeded.map((c) =>
+      outbox.put({ key: `contexts:${c.id}`, table: "contexts" as const, id: c.id }),
+    ),
+    tx.done,
+  ]);
   return seeded;
 }
 
@@ -178,6 +184,31 @@ async function doInit(): Promise<void> {
   initChannel();
   initialized = true;
   notify();
+
+  // Backend on → run the background sync loop. (AuthGate only reveals the app with a live
+  // session in env-present builds, so a usable auth context exists whenever this runs; a
+  // token hiccup just backs off and retries.)
+  if (isSupabaseEnabled()) {
+    gtdSync.setDelegate({ onAdopted: foldAdoptedChanges });
+    gtdSync.start();
+  }
+}
+
+/** Fold server rows (already durably applied by the engine) into the in-memory view. */
+function foldAdoptedChanges(changes: GtdChange[]): void {
+  if (!initialized) return; // reset happened mid-flight; reload paths will pick the rows up
+  let touched = false;
+  for (const change of changes) {
+    if (change.table === "contexts") contexts.set(change.row.id, change.row as Context);
+    else if (change.table === "projects") projects.set(change.row.id, change.row as Project);
+    else if (change.table === "actions") actions.set(change.row.id, change.row as Action);
+    else continue; // reference_items aren't held in memory (no list view yet)
+    touched = true;
+  }
+  if (touched) {
+    notify();
+    broadcast();
+  }
 }
 
 function ensureInit(): Promise<void> {
@@ -270,11 +301,12 @@ export async function createAction(input: NewAction): Promise<Action | null> {
       updated_at: now,
       sort_order: Date.now(),
     };
-    await db.put("actions", action);
+    await putRowWithOutbox("actions", action);
     if (gen !== generation) return null; // wiped mid-write — don't republish PII to memory
     actions.set(action.id, action);
     notify();
     broadcast();
+    gtdSync.requestFlush();
     return action;
   } catch {
     return null; // durable write failed → nothing shown, caller keeps the capture in the inbox
@@ -295,13 +327,12 @@ export async function setActionStatus(id: string, status: ActionStatus): Promise
       waiting_since: status === "waiting" ? cur.waiting_since : null,
       updated_at: nowIso(),
     };
-    const db = await getGtdDB();
-    if (gen !== generation) return false;
-    await db.put("actions", next);
+    await putRowWithOutbox("actions", next);
     if (gen !== generation) return false;
     actions.set(id, next);
     notify();
     broadcast();
+    gtdSync.requestFlush();
     return true;
   } catch {
     return false; // in-memory untouched (durable-first); UI simply keeps the current state
@@ -343,11 +374,12 @@ export async function createProject(input: {
       updated_at: now,
       sort_order: Date.now(),
     };
-    await db.put("projects", project);
+    await putRowWithOutbox("projects", project);
     if (gen !== generation) return null;
     projects.set(project.id, project);
     notify();
     broadcast();
+    gtdSync.requestFlush();
     return project;
   } catch {
     return null;
@@ -361,13 +393,12 @@ export async function setProjectStatus(id: string, status: ProjectStatus): Promi
   const gen = generation;
   try {
     const next: Project = { ...cur, status, updated_at: nowIso() };
-    const db = await getGtdDB();
-    if (gen !== generation) return false;
-    await db.put("projects", next);
+    await putRowWithOutbox("projects", next);
     if (gen !== generation) return false;
     projects.set(id, next);
     notify();
     broadcast();
+    gtdSync.requestFlush();
     return true;
   } catch {
     return false;
@@ -385,17 +416,18 @@ export async function createReference(input: {
   try {
     await ensureInit();
     if (gen !== generation) return false;
+    const now = nowIso();
     const ref: ReferenceItem = {
       id: uuid(),
       title,
       body: null,
       source_capture_id: input.source_capture_id ?? null,
-      created_at: nowIso(),
+      created_at: now,
+      updated_at: now,
     };
-    const db = await getGtdDB();
-    if (gen !== generation) return false;
-    await db.put("references", ref);
+    await putRowWithOutbox("reference_items", ref);
     // References aren't listed yet (a later slice) — no in-memory snapshot to update.
+    gtdSync.requestFlush();
     return gen === generation;
   } catch {
     return false;
@@ -405,6 +437,7 @@ export async function createReference(input: {
 /** Tear down the in-memory view on logout/account-switch (paired with clearGtdData). */
 export function resetGtdStore(): void {
   generation++;
+  gtdSync.stop(); // quiesce BEFORE the wipe so no in-flight pull writes PII back
   closeChannel();
   contexts.clear();
   actions.clear();

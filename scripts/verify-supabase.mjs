@@ -130,9 +130,98 @@ async function main() {
   const aAfter = await A.client.from("captures").select("*").eq("client_id", c1).single();
   check("A's c1 untouched by B's write attempt", aAfter.data?.raw_text === "hello world", aAfter.data?.raw_text);
 
+  // ═══════════════ Phase 2: sync_gtd (organize-domain LWW sync, migration 0003) ═══════════════
+  console.log("→ [A] sync_gtd: LWW upsert + incremental pull…");
+  const ctxId = "6fb2a1c0-0000-4000-8000-000000000002"; // canonical @computer id (types.ts)
+  const projId = crypto.randomUUID();
+  const actId = crypto.randomUUID();
+  const t0 = iso(-60_000);
+  const t1 = iso(-30_000);
+  const t2 = iso(-10_000);
+
+  const actionRow = {
+    id: actId, title: "fresh title", context_id: ctxId, project_id: projId, status: "active",
+    is_two_minute: false, energy: null, waiting_on_text: null, waiting_since: null,
+    source_capture_id: null, created_at: t1, updated_at: t1, sort_order: 2,
+  };
+  const push1 = [
+    { table: "contexts", row: { id: ctxId, name: "@computer", type: "tool", sort_order: 1, updated_at: t1 } },
+    { table: "projects", row: { id: projId, title: "Verify project", status: "active", source_capture_id: null, created_at: t1, updated_at: t1, sort_order: 1 } },
+    { table: "actions", row: actionRow },
+  ];
+  const g1 = await A.client.rpc("sync_gtd", { p_changes: push1, p_since: 0 });
+  check("sync_gtd push succeeded", !g1.error, g1.error?.message);
+  check("pull since 0 returns the 3 pushed rows", (g1.data?.rows ?? []).length === 3, `rows=${g1.data?.rows?.length}`);
+  const seq1 = Number(g1.data?.max_seq ?? 0);
+  check("max_seq advanced", seq1 > 0, `max_seq=${seq1}`);
+
+  console.log("→ [A] idempotent re-push / stale-loses / newer-wins…");
+  const g2 = await A.client.rpc("sync_gtd", { p_changes: push1, p_since: seq1 });
+  check(
+    "identical re-push: no changes, watermark stable (equal LWW clock skips)",
+    !g2.error && (g2.data?.rows ?? []).length === 0 && Number(g2.data?.max_seq) === seq1,
+    g2.error?.message ?? `rows=${g2.data?.rows?.length} max=${g2.data?.max_seq}`,
+  );
+
+  const g3 = await A.client.rpc("sync_gtd", {
+    p_changes: [{ table: "actions", row: { ...actionRow, title: "STALE - must lose", updated_at: t0 } }],
+    p_since: seq1,
+  });
+  check("stale push (older clock) ignored", !g3.error && (g3.data?.rows ?? []).length === 0, g3.error?.message);
+
+  const g4 = await A.client.rpc("sync_gtd", {
+    p_changes: [{ table: "actions", row: { ...actionRow, title: "fresher title", updated_at: t2 } }],
+    p_since: seq1,
+  });
+  const pulled4 = (g4.data?.rows ?? []).filter((c) => c.table === "actions");
+  check(
+    "newer push applied + returned by incremental pull",
+    pulled4.length === 1 && pulled4[0].row.title === "fresher title",
+    JSON.stringify(pulled4.map((c) => c.row.title)),
+  );
+
+  const g5 = await A.client.rpc("sync_gtd", {
+    p_changes: [{ table: "projects", row: { id: projId, title: "clock abuser", status: "active", source_capture_id: null, created_at: t1, updated_at: iso(500 * 24 * 3600 * 1000), sort_order: 1 } }],
+    p_since: 0,
+  });
+  const proj5 = (g5.data?.rows ?? []).find((c) => c.table === "projects" && c.row.id === projId);
+  check(
+    "implausibly-future updated_at clamped (≤ now + 6 min)",
+    proj5 && Date.parse(proj5.row.updated_at) < Date.now() + 6 * 60_000,
+    proj5?.row?.updated_at,
+  );
+
+  const gBad = await A.client.rpc("sync_gtd", {
+    p_changes: [
+      { table: "actions", row: { id: "not-a-uuid", updated_at: t2 } },
+      { table: "reference_items", row: { id: crypto.randomUUID(), title: "kept", body: null, source_capture_id: null, created_at: t2, updated_at: t2 } },
+    ],
+    p_since: 0,
+  });
+  check(
+    "malformed row skipped; good row in same batch still applied",
+    !gBad.error && (gBad.data?.rows ?? []).some((c) => c.table === "reference_items" && c.row.title === "kept"),
+    gBad.error?.message,
+  );
+
+  console.log("→ [B] sync_gtd isolation…");
+  const gB0 = await B.client.rpc("sync_gtd", { p_changes: [], p_since: 0 });
+  check(
+    "B pulls none of A's gtd rows",
+    !gB0.error && (gB0.data?.rows ?? []).length === 0,
+    gB0.error?.message ?? `rows=${gB0.data?.rows?.length}`,
+  );
+  await B.client.rpc("sync_gtd", {
+    p_changes: [{ table: "actions", row: { ...actionRow, title: "B TAMPER", updated_at: iso(0) } }],
+    p_since: 0,
+  });
+  const gA = await A.client.rpc("sync_gtd", { p_changes: [], p_since: 0 });
+  const aAct = (gA.data?.rows ?? []).find((c) => c.table === "actions" && c.row.id === actId);
+  check("A's action untouched by B pushing A's id (B made its OWN row)", aAct?.row?.title === "fresher title", aAct?.row?.title);
+
   console.log("");
   if (failures === 0) {
-    console.log("✅ ALL CHECKS PASSED — no loss, no dupes, tombstone terminal, skew/clamp faithful, RLS isolated.");
+    console.log("✅ ALL CHECKS PASSED — capture spine: no loss/dupes, tombstone terminal, skew clamped; gtd sync: LWW faithful, idempotent, clock-clamped, fault-isolated; RLS isolates both domains.");
     process.exit(0);
   } else {
     console.error(`❌ ${failures} check(s) FAILED.`);

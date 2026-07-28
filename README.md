@@ -46,20 +46,34 @@ once set, the public URL becomes the real signed-in app (magic link + capture sy
 unset it stays the offline demo. To flip it on: `gh secret set` both vars, allow-list
 `https://jfoval.github.io/mainline/` in Supabase Auth → URL Configuration, re-run deploy.
 
-Health: `tsc` · `eslint` · `next build` (env-absent export) · 25 tests · live Supabase harness — all green.
+**GTD-domain sync (2026-07-28):** actions/projects/contexts/references now sync across devices.
+Whole-row **last-write-wins** with a durable outbox (row + dirty-mark written in ONE IndexedDB
+transaction — no stranded edits) and an incremental pull watermark; one `sync_gtd` RPC does
+push+pull per round trip (LWW upsert, per-row fault isolation, future-clock clamp, forgery-proof
+`server_seq`, FORCE RLS — migration [`0003`](supabase/migrations/0003_gtd_sync.sql)). The engine
+([`src/lib/gtd/sync.ts`](src/lib/gtd/sync.ts)) mirrors the capture SyncEngine's discipline:
+single-flight, backoff, online/foreground re-entry, ~20s idle pull (poor-man's realtime),
+quiesce-before-logout-wipe. Default contexts got **canonical ids** so devices merge instead of
+duplicating; the v3→v4 client upgrade remaps old rows + queues all pre-sync data for first push
+(verified in-browser). The capture spine keeps its op-log — raw thoughts stay sacred; organize
+rows are LWW replicas (rationale in 0003's header). Verify harness extended with the sync_gtd
+invariants. **Requires migration 0003 applied — see go-live checklist below.**
+
+Health: `tsc` · `eslint` · `next build` (env-absent export) · 34 tests · live Supabase harness — all green.
 
 > Remaining step-5 confirmation: the browser end-to-end (magic-link sign-in → capture → cross-device
 > sync) — the RPC/RLS contract underneath it is already proven. See [`docs/PHASE-1-SUPABASE.md`](docs/PHASE-1-SUPABASE.md).
 
 ## What's next — pick one
 
-**A · GTD-domain backend sync. Recommended — the user's cross-device ask.** Actions, projects,
-contexts, references currently live per-device (IndexedDB only); captures already sync. Mirror
-the proven capture spine (op-log RPC or version-guarded rows per DATA-MODEL) so clarifying on
-the phone shows up on the laptop. This is the gap between "capture anywhere, process at a desk"
-(works today) and "one system on every device" (the product promise).
+**Go-live checklist (user steps, ~2 min total):** (1) `gh secret set` the two `NEXT_PUBLIC_SUPABASE_*`
+repo secrets; (2) Supabase → Authentication → URL Configuration: Site URL + Redirect URL for
+`https://jfoval.github.io/mainline/`; (3) Supabase → SQL Editor: paste + run
+[`0003_gtd_sync.sql`](supabase/migrations/0003_gtd_sync.sql); (4) re-run the Pages deploy.
+Optional proof: `VERIFY_EMAIL_BASE=you@gmail.com node --env-file=.env.local scripts/verify-supabase.mjs`
+(needs Auth "Confirm email" OFF during the run).
 
-**A2 · Manual GTD engine, Slice 3 — the guided Weekly Review.** The keystone habit
+**A · Manual GTD engine, Slice 3 — the guided Weekly Review. Recommended.** The keystone habit
 (FOUNDATIONS §2): empty the inbox, review projects for stalls, age the Waiting-For list,
 re-decide stale Someday items — completes the manual loop. Queries sketched in
 [`docs/DATA-MODEL.md`](docs/DATA-MODEL.md) §review.
@@ -110,8 +124,10 @@ Auth + Storage) · Claude API (Opus 4.8 + Haiku 4.5) · local-first, sequenced o
 - Capture trust spine: [`src/lib/capture/`](src/lib/capture/) — backend swap-point `adapter.ts`
   (env present → `SupabaseAdapter`, absent → offline `LocalOnlyAdapter`).
 - GTD organize domain: [`src/lib/gtd/`](src/lib/gtd/) — actions/projects/contexts/references
-  store (local-first, IndexedDB `gtd-organize`); pure list logic in `views.ts` (tested); UI in
-  `ClarifyPanel` / `NextActionsList` / `ProjectsList` / `WaitingList` / `SomedayList`.
+  store (local-first, IndexedDB `gtd-organize`); pure list logic in `views.ts` + LWW decisions in
+  `sync-merge.ts` (both tested); background sync engine `sync.ts` (outbox + watermark →
+  `sync_gtd` RPC, migration `0003`); UI in `ClarifyPanel` / `NextActionsList` / `ProjectsList` /
+  `WaitingList` / `SomedayList`.
 - Supabase client + auth: [`src/lib/supabase/`](src/lib/supabase/); gate UI `AuthGate`/`SignIn`.
   Migrations: [`supabase/migrations/`](supabase/migrations/) (applied live). Live-verify:
   [`scripts/verify-supabase.mjs`](scripts/verify-supabase.mjs).

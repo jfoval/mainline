@@ -65,6 +65,15 @@ export default function RootLayout({
               <div className="hidden sm:block">
                 <MainNav />
               </div>
+              {/* Support/feature tickets need the backend — hidden in offline builds. */}
+              {process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? (
+                <Link
+                  href="/help"
+                  className="rounded-md px-3 py-1.5 text-sm text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+                >
+                  Help
+                </Link>
+              ) : null}
               <AuthStatus />
             </div>
           </nav>

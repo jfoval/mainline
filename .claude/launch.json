@@ -6,6 +6,21 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["exec", "next", "dev", "--port", "3210"],
       "port": 3210
+    },
+    {
+      "name": "dev-local",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "NEXT_PUBLIC_SUPABASE_URL=",
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY=",
+        "pnpm",
+        "exec",
+        "next",
+        "dev",
+        "--port",
+        "3211"
+      ],
+      "port": 3211
     }
   ]
 }

@@ -22,16 +22,27 @@ import {
   isGtdStorageAvailable,
   resetGtdDbHandle,
 } from "./db";
-import type { Action, ActionStatus, Context, Energy, ReferenceItem } from "./types";
+import type {
+  Action,
+  ActionStatus,
+  Context,
+  Energy,
+  Project,
+  ProjectStatus,
+  ReferenceItem,
+} from "./types";
 
 const contexts = new Map<string, Context>();
 const actions = new Map<string, Action>();
+const projects = new Map<string, Project>();
 const listeners = new Set<() => void>();
 
 const EMPTY_ACTIONS: readonly Action[] = Object.freeze([]);
 const EMPTY_CONTEXTS: readonly Context[] = Object.freeze([]);
+const EMPTY_PROJECTS: readonly Project[] = Object.freeze([]);
 let actionsSnap: readonly Action[] = EMPTY_ACTIONS;
 let contextsSnap: readonly Context[] = EMPTY_CONTEXTS;
+let projectsSnap: readonly Project[] = EMPTY_PROJECTS;
 
 let initialized = false;
 let initPromise: Promise<void> | null = null;
@@ -73,15 +84,18 @@ async function reloadFromDb(): Promise<void> {
   try {
     const db = await getGtdDB();
     if (gen !== generation) return;
-    const [allContexts, allActions] = await Promise.all([
+    const [allContexts, allActions, allProjects] = await Promise.all([
       db.getAll("contexts"),
       db.getAll("actions"),
+      db.getAll("projects"),
     ]);
     if (gen !== generation) return;
     contexts.clear();
     actions.clear();
+    projects.clear();
     for (const c of allContexts) contexts.set(c.id, c);
     for (const a of allActions) actions.set(a.id, a);
+    for (const p of allProjects) projects.set(p.id, p);
     notify();
   } catch {
     // transient read failure — next broadcast/init will catch up
@@ -104,6 +118,9 @@ function rebuild(): void {
   );
   contextsSnap = Object.freeze(
     [...contexts.values()].sort((a, b) => a.sort_order - b.sort_order),
+  );
+  projectsSnap = Object.freeze(
+    [...projects.values()].sort((a, b) => b.sort_order - a.sort_order),
   );
 }
 
@@ -146,13 +163,18 @@ async function doInit(): Promise<void> {
   if (gen !== generation) return; // reset while opening — don't touch anything
   const loaded = await loadOrSeedContexts(db);
   if (gen !== generation) return;
-  const allActions = await db.getAll("actions");
+  const [allActions, allProjects] = await Promise.all([
+    db.getAll("actions"),
+    db.getAll("projects"),
+  ]);
   if (gen !== generation) return;
   // All awaits done and generation still current — now (and only now) mutate shared state.
   contexts.clear();
   actions.clear();
+  projects.clear();
   for (const c of loaded) contexts.set(c.id, c);
   for (const a of allActions) actions.set(a.id, a);
+  for (const p of allProjects) projects.set(p.id, p);
   initChannel();
   initialized = true;
   notify();
@@ -189,12 +211,22 @@ export function useContexts(): readonly Context[] {
   return useSyncExternalStore(subscribe, () => contextsSnap, () => EMPTY_CONTEXTS);
 }
 
+export function useProjects(): readonly Project[] {
+  useEffect(() => {
+    ensureInit().catch(() => {});
+  }, []);
+  return useSyncExternalStore(subscribe, () => projectsSnap, () => EMPTY_PROJECTS);
+}
+
 export interface NewAction {
   title: string;
   context_id?: string | null;
+  project_id?: string | null;
   status?: ActionStatus;
   is_two_minute?: boolean;
   energy?: Energy | null;
+  /** who/what it's on — only meaningful with status "waiting". */
+  waiting_on_text?: string | null;
   source_capture_id?: string | null;
 }
 
@@ -222,14 +254,17 @@ export async function createAction(input: NewAction): Promise<Action | null> {
     }
 
     const now = nowIso();
+    const status = input.status ?? "active";
     const action: Action = {
       id: uuid(),
       title,
       context_id: input.context_id ?? null,
-      project_id: null,
-      status: input.status ?? "active",
+      project_id: input.project_id ?? null,
+      status,
       is_two_minute: input.is_two_minute ?? false,
       energy: input.energy ?? null,
+      waiting_on_text: status === "waiting" ? input.waiting_on_text?.trim() || null : null,
+      waiting_since: status === "waiting" ? now : null,
       source_capture_id: input.source_capture_id ?? null,
       created_at: now,
       updated_at: now,
@@ -252,7 +287,14 @@ export async function setActionStatus(id: string, status: ActionStatus): Promise
   if (!cur || cur.status === status) return true;
   const gen = generation;
   try {
-    const next: Action = { ...cur, status, updated_at: nowIso() };
+    const next: Action = {
+      ...cur,
+      status,
+      // Leaving "waiting" clears the waiting metadata — a resolved Waiting-For isn't on anyone.
+      waiting_on_text: status === "waiting" ? cur.waiting_on_text : null,
+      waiting_since: status === "waiting" ? cur.waiting_since : null,
+      updated_at: nowIso(),
+    };
     const db = await getGtdDB();
     if (gen !== generation) return false;
     await db.put("actions", next);
@@ -263,6 +305,72 @@ export async function setActionStatus(id: string, status: ActionStatus): Promise
     return true;
   } catch {
     return false; // in-memory untouched (durable-first); UI simply keeps the current state
+  }
+}
+
+/**
+ * Create a project. Same contract as createAction: returns null if the durable write couldn't
+ * happen, and is idempotent per source capture (a crash between the project write and the
+ * capture status change can't produce duplicates on re-clarify).
+ */
+export async function createProject(input: {
+  title: string;
+  source_capture_id?: string | null;
+}): Promise<Project | null> {
+  const title = input.title.trim();
+  if (!title || !isGtdStorageAvailable()) return null;
+  const gen = generation;
+  try {
+    await ensureInit();
+    if (gen !== generation) return null;
+    const db = await getGtdDB();
+    if (gen !== generation) return null;
+
+    if (input.source_capture_id) {
+      const existing = await db.getAllFromIndex("projects", "by_source", input.source_capture_id);
+      if (gen !== generation) return null;
+      const live = existing.find((p) => p.status !== "dropped");
+      if (live) return live; // already clarified — idempotent no-op
+    }
+
+    const now = nowIso();
+    const project: Project = {
+      id: uuid(),
+      title,
+      status: "active",
+      source_capture_id: input.source_capture_id ?? null,
+      created_at: now,
+      updated_at: now,
+      sort_order: Date.now(),
+    };
+    await db.put("projects", project);
+    if (gen !== generation) return null;
+    projects.set(project.id, project);
+    notify();
+    broadcast();
+    return project;
+  } catch {
+    return null;
+  }
+}
+
+/** Set a project's status. Returns false if the durable write couldn't happen. */
+export async function setProjectStatus(id: string, status: ProjectStatus): Promise<boolean> {
+  const cur = projects.get(id);
+  if (!cur || cur.status === status) return true;
+  const gen = generation;
+  try {
+    const next: Project = { ...cur, status, updated_at: nowIso() };
+    const db = await getGtdDB();
+    if (gen !== generation) return false;
+    await db.put("projects", next);
+    if (gen !== generation) return false;
+    projects.set(id, next);
+    notify();
+    broadcast();
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -300,8 +408,10 @@ export function resetGtdStore(): void {
   closeChannel();
   contexts.clear();
   actions.clear();
+  projects.clear();
   actionsSnap = EMPTY_ACTIONS;
   contextsSnap = EMPTY_CONTEXTS;
+  projectsSnap = EMPTY_PROJECTS;
   initialized = false;
   initPromise = null;
   notify();

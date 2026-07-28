@@ -29,17 +29,26 @@ generation-guarded logout wipes, cross-tab BroadcastChannel, idempotent clarify 
 source capture). Adversarially reviewed (17 confirmed findings fixed); all flows verified
 in-browser including the v1→v2 IndexedDB upgrade.
 
-Health: `tsc` · `eslint` · `next build` (env-absent export) · 13 tests · live Supabase harness — all green.
+**Slice 2 is DONE — Projects + Waiting-For:** clarify's "actionable" step now forks three ways —
+next action, **Project** (outcome + its first next action created together, so no project is ever
+born stalled), or **Waiting For** (delegated/blocked, with who-it's-on + aging). New views:
+**Projects** (each card shows its current mover; a stalled project surfaces GTD's cardinal-rule
+re-decision inline — name the next action or mark it complete, derived live so it can't go stale)
+and **Waiting** (oldest first; resolve as done or "my move now" → Next). Next-action rows show
+their project. IndexedDB v2→v3 (projects store + waiting-field backfill). Verified end-to-end
+in-browser (project clarify → stall → re-action; waiting → resolve), zero console errors.
+
+Health: `tsc` · `eslint` · `next build` (env-absent export) · 25 tests · live Supabase harness — all green.
 
 > Remaining step-5 confirmation: the browser end-to-end (magic-link sign-in → capture → cross-device
 > sync) — the RPC/RLS contract underneath it is already proven. See [`docs/PHASE-1-SUPABASE.md`](docs/PHASE-1-SUPABASE.md).
 
 ## What's next — pick one
 
-**A · Manual GTD engine, Slice 2 — Projects + Waiting-For. Recommended.** Projects (>1 action,
-outcome, "next action needed" invariant), Waiting-For (delegate + aging), and wiring clarify to
-them ("it's a project" / "delegate it"). Then Slice 3 = the guided **Weekly Review** — that
-completes the whole manual loop. Schema blueprint: [`docs/DATA-MODEL.md`](docs/DATA-MODEL.md).
+**A · Manual GTD engine, Slice 3 — the guided Weekly Review. Recommended.** The keystone habit
+(FOUNDATIONS §2): a step-by-step flow — empty the inbox, review projects for stalls, age the
+Waiting-For list, re-decide stale Someday items. This completes the whole manual loop. Review
+queries are already sketched in [`docs/DATA-MODEL.md`](docs/DATA-MODEL.md) §review.
 
 **B · Phase 3 — AI clarify + knowledge base.** The accelerant over the manual engine:
 propose→approve seam (HostedClaude), KB by GTD horizons. Needs an Anthropic API key.
@@ -86,8 +95,9 @@ Auth + Storage) · Claude API (Opus 4.8 + Haiku 4.5) · local-first, sequenced o
 
 - Capture trust spine: [`src/lib/capture/`](src/lib/capture/) — backend swap-point `adapter.ts`
   (env present → `SupabaseAdapter`, absent → offline `LocalOnlyAdapter`).
-- GTD organize domain: [`src/lib/gtd/`](src/lib/gtd/) — actions/contexts/references store
-  (local-first, IndexedDB `gtd-organize`); UI in `ClarifyPanel` / `NextActionsList` / `SomedayList`.
+- GTD organize domain: [`src/lib/gtd/`](src/lib/gtd/) — actions/projects/contexts/references
+  store (local-first, IndexedDB `gtd-organize`); pure list logic in `views.ts` (tested); UI in
+  `ClarifyPanel` / `NextActionsList` / `ProjectsList` / `WaitingList` / `SomedayList`.
 - Supabase client + auth: [`src/lib/supabase/`](src/lib/supabase/); gate UI `AuthGate`/`SignIn`.
   Migrations: [`supabase/migrations/`](supabase/migrations/) (applied live). Live-verify:
   [`scripts/verify-supabase.mjs`](scripts/verify-supabase.mjs).

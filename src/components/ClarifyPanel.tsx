@@ -2,12 +2,15 @@
 
 import { useState } from "react";
 import { discardCapture, setCaptureStatus } from "@/lib/capture/store";
-import { createAction, createReference, useContexts } from "@/lib/gtd/store";
+import { createAction, createProject, createReference, useContexts } from "@/lib/gtd/store";
+import type { Context } from "@/lib/gtd/types";
 
 /**
- * The heart of GTD: clarify ONE inbox item. Actionable? → a next action (with a context).
- * Not actionable? → Someday / Reference / Trash. Either way the capture leaves the inbox
- * (status → processed/discarded, which syncs via the capture op-log).
+ * The heart of GTD: clarify ONE inbox item. Actionable? → a next action (with a context),
+ * a project (>1 action — created with its first next action, so no project is ever born
+ * stalled), or a Waiting-For (someone else's move). Not actionable? → Someday / Reference /
+ * Trash. Either way the capture leaves the inbox (status → processed/discarded, which syncs
+ * via the capture op-log).
  */
 export function ClarifyPanel({
   clientId,
@@ -19,8 +22,11 @@ export function ClarifyPanel({
   onDone: () => void;
 }) {
   const contexts = useContexts();
-  const [step, setStep] = useState<"ask" | "no" | "yes">("ask");
+  const [step, setStep] = useState<"ask" | "no" | "yes" | "project" | "waiting">("ask");
   const [title, setTitle] = useState(rawText);
+  const [projectTitle, setProjectTitle] = useState(rawText);
+  const [firstAction, setFirstAction] = useState("");
+  const [waitingOn, setWaitingOn] = useState("");
   const [selectedContextId, setSelectedContextId] = useState<string | null>(null);
   const [twoMin, setTwoMin] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -88,6 +94,34 @@ export function ClarifyPanel({
       await setCaptureStatus(clientId, "processed");
       return true;
     });
+  const addProject = () =>
+    run(async () => {
+      // Project first, then its first action — both idempotent per source capture, so a crash
+      // anywhere in between converges on retry instead of duplicating.
+      const project = await createProject({ title: projectTitle, source_capture_id: clientId });
+      if (!project) return false;
+      const action = await createAction({
+        title: firstAction,
+        context_id: contextId,
+        project_id: project.id,
+        source_capture_id: clientId,
+      });
+      if (!action) return false;
+      await setCaptureStatus(clientId, "processed");
+      return true;
+    });
+  const addWaiting = () =>
+    run(async () => {
+      const action = await createAction({
+        title,
+        status: "waiting",
+        waiting_on_text: waitingOn,
+        source_capture_id: clientId,
+      });
+      if (!action) return false;
+      await setCaptureStatus(clientId, "processed");
+      return true;
+    });
 
   return (
     <div className="mt-3 rounded-[10px] border border-border bg-surface-2 p-3">
@@ -142,29 +176,27 @@ export function ClarifyPanel({
             placeholder="e.g. Email venue re: availability"
             className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-border-strong"
           />
-          <div className="flex flex-wrap gap-1.5">
-            {contexts.map((c) => {
-              const active = c.id === contextId;
-              return (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => setSelectedContextId(c.id)}
-                  className={
-                    active
-                      ? "rounded-full border border-accent px-3 py-1 text-sm text-accent-link"
-                      : "rounded-full border border-border px-3 py-1 text-sm text-muted transition-colors hover:text-foreground"
-                  }
-                >
-                  {c.name}
-                </button>
-              );
-            })}
-          </div>
+          <ContextChips contexts={contexts} contextId={contextId} onSelect={setSelectedContextId} />
           <label className="flex items-center gap-2 text-sm text-muted">
             <input type="checkbox" checked={twoMin} onChange={(e) => setTwoMin(e.target.checked)} />
             Takes under 2 minutes (do it now)
           </label>
+          <div className="flex flex-wrap gap-2 text-sm">
+            <button
+              type="button"
+              onClick={() => setStep("project")}
+              className="rounded-lg border border-border px-3 py-1.5 text-muted transition-colors hover:border-border-strong hover:text-foreground"
+            >
+              More than one step → Project
+            </button>
+            <button
+              type="button"
+              onClick={() => setStep("waiting")}
+              className="rounded-lg border border-border px-3 py-1.5 text-muted transition-colors hover:border-border-strong hover:text-foreground"
+            >
+              On someone else → Waiting For
+            </button>
+          </div>
           <div className="flex items-center justify-end gap-2 text-sm">
             <button type="button" onClick={() => setStep("ask")} className="rounded-lg px-3 py-2 text-muted hover:text-foreground">
               Back
@@ -180,6 +212,115 @@ export function ClarifyPanel({
           </div>
         </div>
       )}
+
+      {step === "project" && (
+        <div className="flex flex-col gap-3">
+          <label className="text-sm text-muted" htmlFor="proj-title">
+            What&apos;s the outcome? (state it as already done)
+          </label>
+          <input
+            id="proj-title"
+            value={projectTitle}
+            onChange={(e) => setProjectTitle(e.target.value)}
+            placeholder="e.g. Maui trip booked"
+            className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-border-strong"
+          />
+          <label className="text-sm text-muted" htmlFor="proj-first">
+            And the very next physical action?
+          </label>
+          <input
+            id="proj-first"
+            value={firstAction}
+            onChange={(e) => setFirstAction(e.target.value)}
+            placeholder="e.g. Email venue re: availability"
+            className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-border-strong"
+          />
+          <ContextChips contexts={contexts} contextId={contextId} onSelect={setSelectedContextId} />
+          <div className="flex items-center justify-end gap-2 text-sm">
+            <button type="button" onClick={() => setStep("yes")} className="rounded-lg px-3 py-2 text-muted hover:text-foreground">
+              Back
+            </button>
+            <button
+              type="button"
+              disabled={busy || !projectTitle.trim() || !firstAction.trim() || contexts.length === 0}
+              onClick={addProject}
+              className="btn-accent rounded-lg px-4 py-2 font-medium"
+            >
+              {contexts.length === 0 ? "Loading contexts…" : "Create project"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {step === "waiting" && (
+        <div className="flex flex-col gap-3">
+          <label className="text-sm text-muted" htmlFor="wf-title">
+            What are you waiting for?
+          </label>
+          <input
+            id="wf-title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="e.g. Sarah sends the venue quote"
+            className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-border-strong"
+          />
+          <label className="text-sm text-muted" htmlFor="wf-on">
+            Who or what is it on? (optional)
+          </label>
+          <input
+            id="wf-on"
+            value={waitingOn}
+            onChange={(e) => setWaitingOn(e.target.value)}
+            placeholder="e.g. Sarah"
+            className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-border-strong"
+          />
+          <div className="flex items-center justify-end gap-2 text-sm">
+            <button type="button" onClick={() => setStep("yes")} className="rounded-lg px-3 py-2 text-muted hover:text-foreground">
+              Back
+            </button>
+            <button
+              type="button"
+              disabled={busy || !title.trim()}
+              onClick={addWaiting}
+              className="btn-accent rounded-lg px-4 py-2 font-medium"
+            >
+              Add to Waiting For
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ContextChips({
+  contexts,
+  contextId,
+  onSelect,
+}: {
+  contexts: readonly Context[];
+  contextId: string | null;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {contexts.map((c) => {
+        const active = c.id === contextId;
+        return (
+          <button
+            key={c.id}
+            type="button"
+            onClick={() => onSelect(c.id)}
+            className={
+              active
+                ? "rounded-full border border-accent px-3 py-1 text-sm text-accent-link"
+                : "rounded-full border border-border px-3 py-1 text-sm text-muted transition-colors hover:text-foreground"
+            }
+          >
+            {c.name}
+          </button>
+        );
+      })}
     </div>
   );
 }

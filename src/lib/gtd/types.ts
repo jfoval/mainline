@@ -7,8 +7,7 @@
  * single-item clarify we keep a lightweight `source_capture_id` link instead of that join.
  */
 
-/** actions.status (DATA-MODEL §actions). Phase-2 manual engine uses active/someday/done/dropped;
- *  `waiting`/`scheduled` land with Waiting-For + calendar. */
+/** actions.status (DATA-MODEL §actions). `scheduled` lands with calendar. */
 export type ActionStatus = "active" | "waiting" | "someday" | "done" | "dropped";
 
 export type Energy = "low" | "medium" | "high";
@@ -29,17 +28,38 @@ export interface Action {
   id: string;
   title: string;
   context_id: string | null;
-  /** Projects land in slice 2; nullable standalone action for now. */
+  /** null = standalone action (no project). */
   project_id: string | null;
   status: ActionStatus;
   /** 2-minute rule — engage/next views surface "do it now". */
   is_two_minute: boolean;
   energy: Energy | null;
+  /** Waiting-For (status="waiting"): who/what it's delegated to or blocked on. */
+  waiting_on_text: string | null;
+  /** when it entered waiting — the aging anchor for the Waiting-For list. */
+  waiting_since: string | null;
   /** lineage back to the inbox capture this was clarified from. */
   source_capture_id: string | null;
   created_at: string;
   updated_at: string;
   /** stable list ordering. */
+  sort_order: number;
+}
+
+/** projects.status (DATA-MODEL §projects). Manual slice uses these three;
+ *  someday/on_hold arrive with the weekly review. */
+export type ProjectStatus = "active" | "completed" | "dropped";
+
+/** An outcome needing more than one action (DATA-MODEL §projects, Horizon 10k). */
+export interface Project {
+  id: string;
+  /** The outcome, stated as done ("Maui trip booked"). */
+  title: string;
+  status: ProjectStatus;
+  /** lineage back to the inbox capture this was clarified from. */
+  source_capture_id: string | null;
+  created_at: string;
+  updated_at: string;
   sort_order: number;
 }
 

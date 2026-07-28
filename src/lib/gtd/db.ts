@@ -6,10 +6,10 @@
  * op-log. Browser-only.
  */
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
-import type { Action, Context, ReferenceItem } from "./types";
+import type { Action, Context, Project, ReferenceItem } from "./types";
 
 const DB_NAME = "gtd-organize";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 interface GtdDBSchema extends DBSchema {
   actions: {
@@ -19,6 +19,11 @@ interface GtdDBSchema extends DBSchema {
   };
   contexts: { key: string; value: Context };
   references: { key: string; value: ReferenceItem };
+  projects: {
+    key: string;
+    value: Project;
+    indexes: { by_source: string };
+  };
 }
 
 export type GtdDB = IDBPDatabase<GtdDBSchema>;
@@ -31,7 +36,7 @@ export function getGtdDB(): Promise<GtdDB> {
   }
   if (!dbPromise) {
     dbPromise = openDB<GtdDBSchema>(DB_NAME, DB_VERSION, {
-      upgrade(db, oldVersion, _newVersion, tx) {
+      async upgrade(db, oldVersion, _newVersion, tx) {
         if (oldVersion < 1) {
           const actions = db.createObjectStore("actions", { keyPath: "id" });
           actions.createIndex("by_status", "status");
@@ -41,6 +46,20 @@ export function getGtdDB(): Promise<GtdDB> {
         if (oldVersion < 2) {
           // by_source: lineage lookup for idempotent clarify (one action per source capture).
           tx.objectStore("actions").createIndex("by_source", "source_capture_id");
+        }
+        if (oldVersion < 3) {
+          const projects = db.createObjectStore("projects", { keyPath: "id" });
+          projects.createIndex("by_source", "source_capture_id");
+          // Backfill the new nullable waiting fields so pre-v3 rows read as valid Actions.
+          let cur = await tx.objectStore("actions").openCursor();
+          while (cur) {
+            await cur.update({
+              ...cur.value,
+              waiting_on_text: cur.value.waiting_on_text ?? null,
+              waiting_since: cur.value.waiting_since ?? null,
+            });
+            cur = await cur.continue();
+          }
         }
       },
     });
@@ -55,11 +74,12 @@ export function isGtdStorageAvailable(): boolean {
 /** Wipe every store — part of logout / account-switch PII clearing (paired with clearLocalData). */
 export async function clearGtdData(): Promise<void> {
   const db = await getGtdDB();
-  const tx = db.transaction(["actions", "contexts", "references"], "readwrite");
+  const tx = db.transaction(["actions", "contexts", "references", "projects"], "readwrite");
   await Promise.all([
     tx.objectStore("actions").clear(),
     tx.objectStore("contexts").clear(),
     tx.objectStore("references").clear(),
+    tx.objectStore("projects").clear(),
     tx.done,
   ]);
 }

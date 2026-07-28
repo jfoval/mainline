@@ -1,6 +1,6 @@
 "use client";
 
-import { setActionStatus, useActions, useContexts } from "@/lib/gtd/store";
+import { setActionStatus, useActions, useContexts, useProjects } from "@/lib/gtd/store";
 import type { Action, Context } from "@/lib/gtd/types";
 
 /**
@@ -10,6 +10,7 @@ import type { Action, Context } from "@/lib/gtd/types";
 export function NextActionsList() {
   const actions = useActions();
   const contexts = useContexts();
+  const projects = useProjects();
   const active = actions.filter((a) => a.status === "active");
 
   if (active.length === 0) {
@@ -34,7 +35,15 @@ export function NextActionsList() {
           </h2>
           <ul className="divide-y divide-border">
             {items.map((a) => (
-              <ActionRow key={a.id} action={a} />
+              <ActionRow
+                key={a.id}
+                action={a}
+                projectTitle={
+                  a.project_id
+                    ? projects.find((p) => p.id === a.project_id)?.title
+                    : undefined
+                }
+              />
             ))}
           </ul>
         </section>
@@ -43,7 +52,7 @@ export function NextActionsList() {
   );
 }
 
-function ActionRow({ action }: { action: Action }) {
+function ActionRow({ action, projectTitle }: { action: Action; projectTitle?: string }) {
   return (
     <li className="flex items-start gap-3 py-3">
       <button
@@ -56,8 +65,14 @@ function ActionRow({ action }: { action: Action }) {
       />
       <div className="flex flex-1 flex-col">
         <span className="text-[15px] leading-relaxed">{action.title}</span>
-        {action.is_two_minute && (
-          <span className="mt-0.5 text-xs text-accent-link">2-minute · do it now</span>
+        {(action.is_two_minute || projectTitle) && (
+          <span className="mt-0.5 text-xs text-muted">
+            {action.is_two_minute && (
+              <span className="text-accent-link">2-minute · do it now</span>
+            )}
+            {action.is_two_minute && projectTitle && " · "}
+            {projectTitle}
+          </span>
         )}
       </div>
     </li>

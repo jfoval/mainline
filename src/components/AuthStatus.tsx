@@ -14,7 +14,7 @@ export function AuthStatus() {
       type="button"
       onClick={() => void signOut()}
       title={session.user.email ?? undefined}
-      className="rounded-md px-3 py-1.5 text-sm text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+      className="whitespace-nowrap rounded-md px-2.5 py-1.5 text-sm text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
     >
       Sign out
     </button>

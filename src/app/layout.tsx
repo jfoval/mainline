@@ -48,7 +48,9 @@ export default function RootLayout({
     <html lang="en" className="h-full">
       <body className="min-h-full flex flex-col">
         <header className="sticky top-0 z-10 border-b border-border bg-background">
-          <nav className="mx-auto flex w-full max-w-2xl items-center justify-between px-4 py-3">
+          {/* Wider than the max-w-2xl content column: the signed-in nav row (6 sections + Help
+              + Sign out) needs the room — narrower viewports use the bottom tab bar instead. */}
+          <nav className="mx-auto flex w-full max-w-3xl items-center justify-between gap-2 px-4 py-3">
             <Link href="/" className="flex items-center gap-2">
               <Image
                 src={`${bp}/logo-mark.png`}
@@ -61,15 +63,16 @@ export default function RootLayout({
               <span className="text-lg font-semibold tracking-tight">Mainline</span>
             </Link>
             <div className="flex items-center gap-1">
-              {/* Top nav is desktop-only; mobile navigates via the bottom tab bar. */}
-              <div className="hidden sm:block">
+              {/* Top nav needs lg+ to fit all items comfortably; below that the bottom tab bar
+                  navigates (tablets included — thumb-friendly there anyway). */}
+              <div className="hidden lg:block">
                 <MainNav />
               </div>
               {/* Support/feature tickets need the backend — hidden in offline builds. */}
               {process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? (
                 <Link
                   href="/help"
-                  className="rounded-md px-3 py-1.5 text-sm text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+                  className="whitespace-nowrap rounded-md px-2.5 py-1.5 text-sm text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
                 >
                   Help
                 </Link>
@@ -78,8 +81,8 @@ export default function RootLayout({
             </div>
           </nav>
         </header>
-        {/* pb-24 reserves space for the fixed bottom tab bar on mobile. */}
-        <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 pt-6 pb-24 sm:pb-6">
+        {/* pb-24 reserves space for the fixed bottom tab bar (shown below lg). */}
+        <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 pt-6 pb-24 lg:pb-6">
           <AuthGate>{children}</AuthGate>
         </main>
         <BottomNav />

@@ -31,8 +31,8 @@ export function MainNav() {
             aria-current={active ? "page" : undefined}
             className={
               active
-                ? "rounded-md px-3 py-1.5 text-accent-link"
-                : "rounded-md px-3 py-1.5 text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+                ? "whitespace-nowrap rounded-md px-2.5 py-1.5 text-accent-link"
+                : "whitespace-nowrap rounded-md px-2.5 py-1.5 text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
             }
           >
             {it.label}

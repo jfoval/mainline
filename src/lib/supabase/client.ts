@@ -34,7 +34,11 @@ export function getSupabase(): SupabaseClient {
         persistSession: true, // session survives reloads / offline (localStorage)
         autoRefreshToken: true,
         detectSessionInUrl: true, // completes the magic-link redirect on load
-        flowType: "pkce", // SPA-safe code exchange for the emailed link
+        // Implicit (not PKCE): email links open in the user's DEFAULT browser, which is often
+        // not the one that requested them (Safari asks, Gmail taps open Chrome). PKCE links
+        // only complete where the request began; implicit signs in whichever browser opens
+        // the link — the behavior a magic-link product actually wants.
+        flowType: "implicit",
       },
     });
   }

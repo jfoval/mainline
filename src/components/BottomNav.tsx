@@ -5,9 +5,10 @@ import { usePathname } from "next/navigation";
 import { NAV_ITEMS } from "./MainNav";
 
 /**
- * Mobile navigation: a fixed bottom tab bar (thumb-reachable, app-standard). Rendered only
- * below the `sm` breakpoint — MainNav owns ≥sm. The bar pads itself for the home-indicator
- * safe area; the page's <main> reserves matching bottom space so content never hides under it.
+ * Mobile/narrow navigation: a fixed bottom tab bar (thumb-reachable, app-standard). Rendered
+ * below the `lg` breakpoint — the top nav row (6 sections + Help + Sign out when signed in)
+ * only fits comfortably at lg+. The bar pads itself for the home-indicator safe area; the
+ * page's <main> reserves matching bottom space so content never hides under it.
  */
 export function BottomNav() {
   const raw = usePathname();
@@ -16,7 +17,7 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-background pb-[env(safe-area-inset-bottom)] sm:hidden"
+      className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-background pb-[env(safe-area-inset-bottom)] lg:hidden"
     >
       <ul className="mx-auto flex w-full max-w-2xl items-stretch">
         {NAV_ITEMS.map((it) => {

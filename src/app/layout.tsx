@@ -4,6 +4,7 @@ import Link from "next/link";
 import "./globals.css";
 import { AuthGate } from "@/components/AuthGate";
 import { AuthStatus } from "@/components/AuthStatus";
+import { BottomNav } from "@/components/BottomNav";
 import { MainNav } from "@/components/MainNav";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
 
@@ -59,14 +60,19 @@ export default function RootLayout({
               <span className="text-lg font-semibold tracking-tight">Mainline</span>
             </Link>
             <div className="flex items-center gap-1">
-              <MainNav />
+              {/* Top nav is desktop-only; mobile navigates via the bottom tab bar. */}
+              <div className="hidden sm:block">
+                <MainNav />
+              </div>
               <AuthStatus />
             </div>
           </nav>
         </header>
-        <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 py-6">
+        {/* pb-24 reserves space for the fixed bottom tab bar on mobile. */}
+        <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 pt-6 pb-24 sm:pb-6">
           <AuthGate>{children}</AuthGate>
         </main>
+        <BottomNav />
         <ServiceWorkerRegistrar />
       </body>
     </html>

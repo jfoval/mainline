@@ -13,6 +13,7 @@ import { useOnline } from "@/lib/use-online";
 export function CaptureBox() {
   const [text, setText] = useState("");
   const [listening, setListening] = useState(false);
+  const [micError, setMicError] = useState<string | null>(null);
   const [justCaptured, setJustCaptured] = useState(false);
   const textRef = useRef<HTMLTextAreaElement>(null);
   const dictationRef = useRef<Dictation | null>(null);
@@ -61,10 +62,14 @@ export function CaptureBox() {
       setListening(false);
       return;
     }
+    setMicError(null);
     baseTextRef.current = text ? text.replace(/\s+$/, "") + " " : "";
     const dictation = createDictation({
       onTranscript: (full) => setText(baseTextRef.current + full),
-      onError: () => setListening(false),
+      onError: (code) => {
+        setListening(false);
+        setMicError(micErrorMessage(code));
+      },
       onEnd: () => setListening(false),
     });
     if (!dictation) return;
@@ -95,7 +100,7 @@ export function CaptureBox() {
                 onClick={toggleMic}
                 aria-pressed={listening}
                 aria-label={listening ? "Stop dictation" : "Start dictation"}
-                className={`flex h-10 w-10 items-center justify-center rounded-full border transition-colors ${
+                className={`flex h-11 w-11 items-center justify-center rounded-full border transition-colors ${
                   listening
                     ? "border-danger bg-danger/10 text-danger animate-pulse"
                     : "border-border text-muted transition-colors hover:border-border-strong hover:text-foreground"
@@ -105,6 +110,7 @@ export function CaptureBox() {
               </button>
             )}
             {listening && <span className="text-sm text-danger">Listening…</span>}
+            {!listening && micError && <span className="text-sm text-muted">{micError}</span>}
           </div>
           <button
             type="button"
@@ -120,6 +126,23 @@ export function CaptureBox() {
       <StatusLine online={online} pending={pending} justCaptured={justCaptured} />
     </div>
   );
+}
+
+/** Human words for SpeechRecognition error codes (they're terse tokens like "not-allowed"). */
+function micErrorMessage(code: string): string | null {
+  switch (code) {
+    case "not-allowed":
+    case "service-not-allowed":
+      return "Mic blocked — allow microphone access for this site, then try again.";
+    case "no-speech":
+      return null; // heard nothing and gave up — not worth an error
+    case "audio-capture":
+      return "No microphone found on this device.";
+    case "network":
+      return "Dictation needs a connection on this browser — type it instead.";
+    default:
+      return "Dictation stopped — tap the mic to retry, or type.";
+  }
 }
 
 function StatusLine({

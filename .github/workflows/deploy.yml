@@ -38,6 +38,11 @@ jobs:
         env:
           # Project Pages are served from /<repo>/ — see next.config.ts.
           NEXT_PUBLIC_BASE_PATH: /mainline
+          # Publishable client creds (safe in the bundle — RLS, not key secrecy, protects data).
+          # Kept as repo secrets so rotation happens in one place. When unset, the expressions
+          # render empty and the build falls back to the offline no-auth demo.
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
       - name: Disable Jekyll (so _next/ assets are served)
         run: touch out/.nojekyll

@@ -6,7 +6,8 @@ and engage — built faithfully on David Allen's GTD. Web-first, open-core.
 
 ## Current status
 
-**Live:** https://jfoval.github.io/mainline/ (auto-deploys on push to `main`).
+**Live:** https://mainline.support (auto-deploys on push to `main`; the old
+jfoval.github.io/mainline URL redirects here).
 
 **Phase 1 is DONE (steps 1–5).** Steps 1–4: capture trust spine + inbox, offline-first against a
 zero-backend `LocalOnlyAdapter` (optimistic insert, durable IndexedDB op-log,

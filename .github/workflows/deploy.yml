@@ -36,8 +36,8 @@ jobs:
       - name: Build static export
         run: pnpm exec next build
         env:
-          # Project Pages are served from /<repo>/ — see next.config.ts.
-          NEXT_PUBLIC_BASE_PATH: /mainline
+          # Custom domain (mainline.support) serves from the ROOT — no basePath. The old
+          # jfoval.github.io/mainline URL 301-redirects to the domain automatically.
           # Publishable client creds (safe in the bundle — RLS, not key secrecy, protects data).
           # Kept as repo secrets so rotation happens in one place. When unset, the expressions
           # render empty and the build falls back to the offline no-auth demo.

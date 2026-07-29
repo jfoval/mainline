@@ -75,18 +75,59 @@ That test caught a real gap — captures born on another device never materializ
 one (`reconcileCapture` heals-only) — fixed via `hydrateCaptureIfMissing` in `c13cf94` and
 verified live. Captures hydrate on app open; the organize domain syncs continuously (~20s).
 
-Health: `tsc` · `eslint` · `next build` (env-absent export) · 40 tests · live Supabase harness — all green.
+**The system is feature-complete (2026-07-29) — Slices 3–7 + the public face.** In one pass, in
+this order:
+
+- **Weekly Review** (`/review`) — guided, one screen per step: inbox to zero (with the reminder to
+  empty your *other* inboxes) → every project has a mover → waiting-for → someday scan. A stalled
+  project **blocks** the step (GTD's cardinal rule is a decision, not a notification); the inbox
+  step counts but never blocks. Finishing writes one write-once `review_sessions` row; "last
+  reviewed" goes amber at 7 days. No streaks, no confetti. Migration
+  [`0006`](supabase/migrations/0006_review_sessions.sql).
+- **Resurface dates** (tickler) — an optional LOCAL calendar day (`actions.resurface_on`, a `date`,
+  not a timestamp) on any action or someday item. While set, the item is off every list; on the day
+  it heads the **inbox** to be decided fresh. Migration
+  [`0007`](supabase/migrations/0007_resurface_dates.sql).
+- **Notes + promote** — one plain notes field on actions, someday items and projects; a someday
+  item grows into a project (outcome + first action, notes carried, fully undoable). Migration
+  [`0008`](supabase/migrations/0008_notes.sql).
+- **Reference index** (`/reference`) — pointer, not vault: a line + optional link + optional project
+  tie, client-side search, soft delete. Migration [`0009`](supabase/migrations/0009_reference_index.sql).
+- **Horizons** (`/horizons`) — Purpose / Vision / Goals / Areas as four prose rows (one row each so
+  two devices editing different horizons both keep their work; canonical ids like the default
+  contexts). The **first review of each month** gains a horizons step beside the project list.
+  Migration [`0010`](supabase/migrations/0010_horizons.sql).
+- **Calendar handoff** — no due dates anywhere; a day-specific action gets a prefilled Google
+  Calendar link or an `.ics` download ([`src/lib/calendar.ts`](src/lib/calendar.ts), pure +
+  tested), then "take it off the list". No accounts, no sync, nothing to break.
+- **Nav restructure** — 7 primary tabs (Capture · Inbox · Next · Projects · Waiting · Review ·
+  More) with Someday / Reference / Horizons / Contexts one tap deeper on `/more`. Shared shape in
+  [`src/lib/nav.ts`](src/lib/nav.ts) — a plain module, because a server page importing data from a
+  `"use client"` module gets a proxy, not the array (caught by the export build).
+- **The public face** — the sign-in page IS the landing page: one line, one paragraph, the sign-in
+  box, and two quiet links. `/setup`, `/guide`, `/method` are **public** (`isPublicRoute`, see
+  [`src/lib/public-routes.ts`](src/lib/public-routes.ts)) and the app nav is hidden from signed-out
+  visitors (`NavGate`). The method guide credits *Getting Things Done* and states the
+  not-affiliated line. SEO: title template + description, canonical URLs, `og.png` social card
+  (`node scripts/gen-og-image.mjs`), `robots.txt` + `sitemap.xml`, and `noindex` on every private
+  screen.
+
+> **Not yet applied to production:** migrations `0006`–`0010` (paste each into the Supabase SQL
+> editor, in order — each one replaces `sync_gtd` wholesale, so order matters), and the Supabase
+> Magic Link email template still needs a link to `https://mainline.support/setup`. Until `0006`+
+> land, the new tables/columns simply don't sync — the client keeps working locally, because
+> `sync_gtd` ignores table names it doesn't know.
+
+Health: `tsc` · `eslint` · `next build` (env-absent export) · 59 tests · live Supabase harness — all green.
 
 ## What's next — pick one
 
-**A · Manual GTD engine, Slice 3 — the guided Weekly Review. Recommended.** The keystone habit
-(FOUNDATIONS §2): empty the inbox, review projects for stalls, age the Waiting-For list,
-re-decide stale Someday items — completes the manual loop. Queries sketched in
-[`docs/DATA-MODEL.md`](docs/DATA-MODEL.md) §review.
+**A · Ship it. Recommended.** Apply migrations `0006`–`0010` in order, add the `/setup` link to the
+Supabase Magic Link template, push to `main` (auto-deploys), then re-sign-in on each device and
+walk one real weekly review. That's the "start sending it to people" moment.
 
-**B · Onboarding polish.** First-run welcome / get-started page (install + how-Mainline-works);
-feedback tickets → email notification to the owner (Resend; edge function or poll); tidy the 4
-throwaway `johnfoval+ml-*` test users via dashboard → Users.
+**B · Onboarding polish.** Feedback tickets → email notification to the owner (Resend; edge
+function or poll); tidy the 4 throwaway `johnfoval+ml-*` test users via dashboard → Users.
 
 **C · Phase 3 — AI clarify + knowledge base.** The accelerant over the manual engine:
 propose→approve seam (HostedClaude), KB by GTD horizons. Needs an Anthropic API key and the
@@ -134,11 +175,16 @@ Auth + Storage) · Claude API (Opus 4.8 + Haiku 4.5) · local-first, sequenced o
 
 - Capture trust spine: [`src/lib/capture/`](src/lib/capture/) — backend swap-point `adapter.ts`
   (env present → `SupabaseAdapter`, absent → offline `LocalOnlyAdapter`).
-- GTD organize domain: [`src/lib/gtd/`](src/lib/gtd/) — actions/projects/contexts/references
-  store (local-first, IndexedDB `gtd-organize`); pure list logic in `views.ts` + LWW decisions in
-  `sync-merge.ts` (both tested); background sync engine `sync.ts` (outbox + watermark →
-  `sync_gtd` RPC, migration `0003`); UI in `ClarifyPanel` / `NextActionsList` / `ProjectsList` /
-  `WaitingList` / `SomedayList`.
+- GTD organize domain: [`src/lib/gtd/`](src/lib/gtd/) — actions/projects/contexts/references/
+  review sessions/horizons store (local-first, IndexedDB `gtd-organize`, now v10); pure list +
+  date logic in `views.ts` and LWW decisions in `sync-merge.ts` (both tested); background sync
+  engine `sync.ts` (outbox + watermark → `sync_gtd` RPC, migrations `0003`–`0010`); UI in
+  `ClarifyPanel` / `NextActionsList` / `ProjectsList` / `WaitingList` / `SomedayList` /
+  `WeeklyReview` / `ReferenceIndex` / `HorizonsEditor` / `ResurfacePicker` / `CalendarHandoff`.
+- Public face: `src/app/{setup,guide,method}/page.tsx` (readable signed-out via
+  [`src/lib/public-routes.ts`](src/lib/public-routes.ts)); nav shape in
+  [`src/lib/nav.ts`](src/lib/nav.ts); SEO metadata in `src/app/layout.tsx` +
+  `robots.ts`/`sitemap.ts`; social card via `node scripts/gen-og-image.mjs`.
 - Supabase client + auth: [`src/lib/supabase/`](src/lib/supabase/); gate UI `AuthGate`/`SignIn`.
   Migrations: [`supabase/migrations/`](supabase/migrations/) (applied live). Live-verify:
   [`scripts/verify-supabase.mjs`](scripts/verify-supabase.mjs).

@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
 import { ProjectsList } from "@/components/ProjectsList";
+
+export const metadata: Metadata = {
+  title: "Projects",
+  // Private screen — nothing here for a crawler (see app/robots.ts).
+  robots: { index: false, follow: false },
+};
 
 export default function ProjectsPage() {
   return (

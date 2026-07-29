@@ -7,6 +7,7 @@ import {
   restoreAction,
   restoreProject,
   setActionStatus,
+  setProjectNotes,
   setProjectStatus,
   updateProjectTitle,
   useActions,
@@ -14,9 +15,16 @@ import {
   useProjects,
 } from "@/lib/gtd/store";
 import type { Action, Context, Project } from "@/lib/gtd/types";
-import { openActionsFor, projectNeedsNextAction, projectProgress } from "@/lib/gtd/views";
+import {
+  dayKey,
+  openActionsFor,
+  projectNeedsNextAction,
+  projectProgress,
+  resurfaceLabel,
+} from "@/lib/gtd/views";
 import { showUndo } from "@/lib/undo";
 import { ContextChips } from "./ContextChips";
+import { NotesField } from "./NotesField";
 
 /**
  * Projects — outcomes needing >1 action (Horizon 10k). The title IS the outcome statement
@@ -71,7 +79,7 @@ function NewProjectForm({ contexts }: { contexts: readonly Context[] }) {
       : null;
     setBusy(false);
     if (!project || !action) {
-      setError("Couldn't save on this device — try again.");
+      setError("Couldn't save on this device. Try again.");
       return;
     }
     setOutcome("");
@@ -160,6 +168,11 @@ function ProjectCard({
           {done} of {total} done
         </p>
       )}
+      <NotesField
+        notes={project.notes}
+        label={`Notes for ${project.title}`}
+        onSave={(next) => setProjectNotes(project.id, next)}
+      />
 
       {open.length > 0 && (
         <ul className="mt-2 divide-y divide-border/60">
@@ -172,7 +185,7 @@ function ProjectCard({
       {stalled && (
         <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border pt-3">
           <p className="text-sm text-warning">
-            Needs a next action — name one below, or mark it complete.
+            Needs a next action. Name one below, or mark it complete.
           </p>
           <button
             type="button"
@@ -272,6 +285,14 @@ function NestedActionRow({ action, contexts }: { action: Action; contexts: reado
           {action.status === "waiting"
             ? `waiting${action.waiting_on_text ? ` on ${action.waiting_on_text}` : ""}`
             : contextName}
+          {/* A deferred mover is off the runway — say so here, or the project looks busy
+              while nothing is showing up in Next Actions. */}
+          {action.resurface_on && (
+            <span className="text-tertiary">
+              {action.status === "waiting" || contextName ? " · " : ""}
+              back {resurfaceLabel(action.resurface_on, dayKey(new Date()))}
+            </span>
+          )}
         </span>
       </div>
     </li>
@@ -301,7 +322,7 @@ function AddActionRow({
     const action = await createAction({ title, context_id: contextId, project_id: project.id });
     setBusy(false);
     if (!action) {
-      setError("Couldn't save on this device — try again.");
+      setError("Couldn't save on this device. Try again.");
       return;
     }
     setTitle("");

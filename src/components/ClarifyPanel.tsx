@@ -50,12 +50,12 @@ export function ClarifyPanel({
     try {
       const ok = await fn();
       if (!ok) {
-        setError("Couldn't save on this device — try again.");
+        setError("Couldn't save on this device. Try again.");
         return;
       }
       onDone();
     } catch {
-      setError("Couldn't save on this device — try again.");
+      setError("Couldn't save on this device. Try again.");
     } finally {
       setBusy(false);
     }
@@ -140,7 +140,7 @@ export function ClarifyPanel({
           <p className="text-sm text-muted">Is it actionable?</p>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => setStep("yes")} className="btn-accent rounded-lg px-4 py-2 text-sm font-medium">
-              Yes — it&apos;s a next action
+              Yes, it&apos;s a next action
             </button>
             <button
               type="button"
@@ -155,7 +155,7 @@ export function ClarifyPanel({
 
       {step === "no" && (
         <div className="flex flex-col gap-3">
-          <p className="text-sm text-muted">Not actionable — where does it go?</p>
+          <p className="text-sm text-muted">Not actionable. Where does it go?</p>
           <div className="flex flex-wrap gap-2 text-sm">
             <button type="button" disabled={busy} onClick={someday} className="rounded-lg border border-border px-4 py-2 transition-colors hover:border-border-strong hover:text-foreground">
               Someday / Maybe

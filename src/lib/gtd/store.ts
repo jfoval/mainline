@@ -28,27 +28,49 @@ import {
 import { gtdSync } from "./sync";
 import {
   DEFAULT_CONTEXTS,
+  HORIZONS,
   type Action,
   type ActionStatus,
   type Context,
   type Energy,
+  type Horizon,
+  type HorizonKey,
   type Project,
   type ProjectStatus,
   type ReferenceItem,
+  type ReviewSession,
 } from "./types";
 
 const contexts = new Map<string, Context>();
 const actions = new Map<string, Action>();
 const projects = new Map<string, Project>();
+const reviews = new Map<string, ReviewSession>();
+const references = new Map<string, ReferenceItem>();
+const horizons = new Map<string, Horizon>();
 const listeners = new Set<() => void>();
 
 const EMPTY_ACTIONS: readonly Action[] = Object.freeze([]);
 const EMPTY_CONTEXTS: readonly Context[] = Object.freeze([]);
 const EMPTY_PROJECTS: readonly Project[] = Object.freeze([]);
+const EMPTY_REFERENCES: readonly ReferenceItem[] = Object.freeze([]);
+const EMPTY_HORIZONS: Readonly<Record<HorizonKey, string>> = Object.freeze({
+  purpose: "",
+  vision: "",
+  goals: "",
+  areas: "",
+});
+/** Horizon bodies by key — a plain record so the four sections read as one value. */
+let horizonsSnap: Readonly<Record<HorizonKey, string>> = EMPTY_HORIZONS;
+const EMPTY_COMPLETIONS: readonly string[] = Object.freeze([]);
+let completionsSnap: readonly string[] = EMPTY_COMPLETIONS;
+let referencesSnap: readonly ReferenceItem[] = EMPTY_REFERENCES;
 let actionsSnap: readonly Action[] = EMPTY_ACTIONS;
 /** Active (non-archived) contexts — what every picker and list shows. */
 let contextsSnap: readonly Context[] = EMPTY_CONTEXTS;
 let projectsSnap: readonly Project[] = EMPTY_PROJECTS;
+/** Newest completed review's timestamp (null = never reviewed) — a scalar, so the
+ *  useSyncExternalStore snapshot is stable without freezing an array. */
+let lastReviewedSnap: string | null = null;
 
 /** Seeds carry the EPOCH clock: a fresh device re-seeding defaults must never win LWW against a
  *  real edit synced from another device (e.g. a rename or archive of "@home"). */
@@ -94,18 +116,28 @@ async function reloadFromDb(): Promise<void> {
   try {
     const db = await getGtdDB();
     if (gen !== generation) return;
-    const [allContexts, allActions, allProjects] = await Promise.all([
-      db.getAll("contexts"),
-      db.getAll("actions"),
-      db.getAll("projects"),
-    ]);
+    const [allContexts, allActions, allProjects, allReviews, allReferences, allHorizons] =
+      await Promise.all([
+        db.getAll("contexts"),
+        db.getAll("actions"),
+        db.getAll("projects"),
+        db.getAll("review_sessions"),
+        db.getAll("references"),
+        db.getAll("horizons"),
+      ]);
     if (gen !== generation) return;
     contexts.clear();
     actions.clear();
     projects.clear();
+    reviews.clear();
+    references.clear();
+    horizons.clear();
     for (const c of allContexts) contexts.set(c.id, c);
     for (const a of allActions) actions.set(a.id, a);
     for (const p of allProjects) projects.set(p.id, p);
+    for (const r of allReviews) reviews.set(r.id, r);
+    for (const r of allReferences) references.set(r.id, r);
+    for (const h of allHorizons) horizons.set(h.id, h);
     notify();
   } catch {
     // transient read failure — next broadcast/init will catch up
@@ -124,6 +156,24 @@ function rebuild(): void {
   projectsSnap = Object.freeze(
     [...projects.values()].sort((a, b) => b.sort_order - a.sort_order),
   );
+  referencesSnap = Object.freeze(
+    [...references.values()]
+      .filter((r) => !r.archived)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at)),
+  );
+  const bodies: Record<HorizonKey, string> = { purpose: "", vision: "", goals: "", areas: "" };
+  for (const h of horizons.values()) {
+    if (h.key in bodies) bodies[h.key] = h.body;
+  }
+  horizonsSnap = Object.freeze(bodies);
+  let latest: string | null = null;
+  for (const r of reviews.values()) {
+    // Date.parse (not string compare): a row pulled from another device could carry a
+    // differently-formatted-but-equivalent timestamp. An unparseable one just never wins.
+    if (!latest || Date.parse(r.completed_at) > Date.parse(latest)) latest = r.completed_at;
+  }
+  lastReviewedSnap = latest;
+  completionsSnap = Object.freeze([...reviews.values()].map((r) => r.completed_at));
 }
 
 
@@ -177,18 +227,27 @@ async function doInit(): Promise<void> {
   if (gen !== generation) return; // reset while opening — don't touch anything
   const loaded = await loadOrSeedContexts(db);
   if (gen !== generation) return;
-  const [allActions, allProjects] = await Promise.all([
+  const [allActions, allProjects, allReviews, allReferences, allHorizons] = await Promise.all([
     db.getAll("actions"),
     db.getAll("projects"),
+    db.getAll("review_sessions"),
+    db.getAll("references"),
+    db.getAll("horizons"),
   ]);
   if (gen !== generation) return;
   // All awaits done and generation still current — now (and only now) mutate shared state.
   contexts.clear();
   actions.clear();
   projects.clear();
+  reviews.clear();
+  references.clear();
+  horizons.clear();
   for (const c of loaded) contexts.set(c.id, c);
   for (const a of allActions) actions.set(a.id, a);
   for (const p of allProjects) projects.set(p.id, p);
+  for (const r of allReviews) reviews.set(r.id, r);
+  for (const r of allReferences) references.set(r.id, r);
+  for (const h of allHorizons) horizons.set(h.id, h);
   initChannel();
   initialized = true;
   notify();
@@ -210,7 +269,12 @@ function foldAdoptedChanges(changes: GtdChange[]): void {
     if (change.table === "contexts") contexts.set(change.row.id, change.row as Context);
     else if (change.table === "projects") projects.set(change.row.id, change.row as Project);
     else if (change.table === "actions") actions.set(change.row.id, change.row as Action);
-    else continue; // reference_items aren't held in memory (no list view yet)
+    else if (change.table === "review_sessions")
+      reviews.set(change.row.id, change.row as ReviewSession);
+    else if (change.table === "reference_items")
+      references.set(change.row.id, change.row as ReferenceItem);
+    else if (change.table === "horizons") horizons.set(change.row.id, change.row as Horizon);
+    else continue;
     touched = true;
   }
   if (touched) {
@@ -257,6 +321,85 @@ export function useProjects(): readonly Project[] {
   return useSyncExternalStore(subscribe, () => projectsSnap, () => EMPTY_PROJECTS);
 }
 
+/** The four horizon bodies, keyed (missing ones read as ""). */
+export function useHorizons(): Readonly<Record<HorizonKey, string>> {
+  useEffect(() => {
+    ensureInit().catch(() => {});
+  }, []);
+  return useSyncExternalStore(subscribe, () => horizonsSnap, () => EMPTY_HORIZONS);
+}
+
+/**
+ * Write one horizon. The row is created on first edit with the CANONICAL id for that key, so
+ * two devices writing "purpose" for the first time converge on one row instead of two.
+ */
+export async function setHorizon(key: HorizonKey, body: string): Promise<boolean> {
+  const spec = HORIZONS.find((h) => h.key === key);
+  if (!spec || !isGtdStorageAvailable()) return false;
+  const gen = generation;
+  try {
+    await ensureInit();
+    if (gen !== generation) return false;
+    const next: Horizon = { id: spec.id, key, body: body.trim(), updated_at: nowIso() };
+    await putRowWithOutbox("horizons", next);
+    if (gen !== generation) return false;
+    horizons.set(next.id, next);
+    notify();
+    broadcast();
+    gtdSync.requestFlush();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Every completed review's timestamp — the review flow uses it for its monthly cadence. */
+export function useReviewCompletions(): readonly string[] {
+  useEffect(() => {
+    ensureInit().catch(() => {});
+  }, []);
+  return useSyncExternalStore(subscribe, () => completionsSnap, () => EMPTY_COMPLETIONS);
+}
+
+/** When the last weekly review was completed on ANY of your devices (null = never). */
+export function useLastReviewedAt(): string | null {
+  useEffect(() => {
+    ensureInit().catch(() => {});
+  }, []);
+  return useSyncExternalStore(subscribe, () => lastReviewedSnap, () => null);
+}
+
+/**
+ * Stamp a completed weekly review. Write-once row (see ReviewSession) — so there is no edit
+ * path, no conflict to resolve, and a review completed offline still lands when sync catches up.
+ * Returns false if the durable write couldn't happen (the flow then says so rather than
+ * claiming a review that isn't recorded).
+ */
+export async function completeReview(startedAt: string): Promise<boolean> {
+  if (!isGtdStorageAvailable()) return false;
+  const gen = generation;
+  try {
+    await ensureInit();
+    if (gen !== generation) return false;
+    const now = nowIso();
+    const session: ReviewSession = {
+      id: uuid(),
+      started_at: startedAt,
+      completed_at: now,
+      updated_at: now,
+    };
+    await putRowWithOutbox("review_sessions", session);
+    if (gen !== generation) return false;
+    reviews.set(session.id, session);
+    notify();
+    broadcast();
+    gtdSync.requestFlush();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export interface NewAction {
   title: string;
   context_id?: string | null;
@@ -267,6 +410,9 @@ export interface NewAction {
   /** who/what it's on — only meaningful with status "waiting". */
   waiting_on_text?: string | null;
   source_capture_id?: string | null;
+  /** local "YYYY-MM-DD" — hides the item until that day (see Action.resurface_on). */
+  resurface_on?: string | null;
+  notes?: string | null;
 }
 
 /**
@@ -308,6 +454,8 @@ export async function createAction(input: NewAction): Promise<Action | null> {
       created_at: now,
       updated_at: now,
       sort_order: Date.now(),
+      resurface_on: input.resurface_on ?? null,
+      notes: input.notes?.trim() || null,
     };
     await putRowWithOutbox("actions", action);
     if (gen !== generation) return null; // wiped mid-write — don't republish PII to memory
@@ -319,6 +467,108 @@ export async function createAction(input: NewAction): Promise<Action | null> {
   } catch {
     return null; // durable write failed → nothing shown, caller keeps the capture in the inbox
   }
+}
+
+/**
+ * Set (or clear, with null) an action's tickler date — a local "YYYY-MM-DD" day. Optionally
+ * changes the status in the SAME write, so "not now, ask me in a month" is one row version
+ * rather than two racing edits. Returns false if the durable write couldn't happen.
+ */
+export async function setResurfaceDate(
+  id: string,
+  date: string | null,
+  status?: ActionStatus,
+): Promise<boolean> {
+  const cur = actions.get(id);
+  if (!cur) return false;
+  const gen = generation;
+  try {
+    const nextStatus = status ?? cur.status;
+    const next: Action = {
+      ...cur,
+      resurface_on: date,
+      status: nextStatus,
+      // Same rule as setActionStatus: leaving "waiting" drops the waiting metadata.
+      waiting_on_text: nextStatus === "waiting" ? cur.waiting_on_text : null,
+      waiting_since: nextStatus === "waiting" ? cur.waiting_since : null,
+      updated_at: nowIso(),
+    };
+    await putRowWithOutbox("actions", next);
+    if (gen !== generation) return false;
+    actions.set(id, next);
+    notify();
+    broadcast();
+    gtdSync.requestFlush();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Set (or clear, with empty) an action's notes. Returns false on write failure. */
+export async function setActionNotes(id: string, notes: string): Promise<boolean> {
+  const cur = actions.get(id);
+  if (!cur) return false;
+  const gen = generation;
+  try {
+    const next: Action = { ...cur, notes: notes.trim() || null, updated_at: nowIso() };
+    await putRowWithOutbox("actions", next);
+    if (gen !== generation) return false;
+    actions.set(id, next);
+    notify();
+    broadcast();
+    gtdSync.requestFlush();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Set (or clear, with empty) a project's notes. Returns false on write failure. */
+export async function setProjectNotes(id: string, notes: string): Promise<boolean> {
+  const cur = projects.get(id);
+  if (!cur) return false;
+  const gen = generation;
+  try {
+    const next: Project = { ...cur, notes: notes.trim() || null, updated_at: nowIso() };
+    await putRowWithOutbox("projects", next);
+    if (gen !== generation) return false;
+    projects.set(id, next);
+    notify();
+    broadcast();
+    gtdSync.requestFlush();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Grow a someday item into a project: its title becomes the outcome, its notes come along, and
+ * the first next action is created with it (nothing here is ever born stalled). The original
+ * item is dropped — not deleted — so Undo can put the whole thing back.
+ *
+ * Order matters: project → action → drop the source. Every step is durable-before-publish, and
+ * a failure part-way leaves the someday item exactly where it was, so a retry is safe.
+ */
+export async function promoteToProject(input: {
+  actionId: string;
+  outcome: string;
+  firstAction: string;
+  contextId?: string | null;
+}): Promise<{ project: Project; firstAction: Action } | null> {
+  const source = actions.get(input.actionId);
+  if (!source) return null;
+  const project = await createProject({ title: input.outcome, notes: source.notes });
+  if (!project) return null;
+  const first = await createAction({
+    title: input.firstAction,
+    context_id: input.contextId ?? null,
+    project_id: project.id,
+  });
+  if (!first) return null;
+  const ok = await setActionStatus(input.actionId, "dropped");
+  return ok ? { project, firstAction: first } : null;
 }
 
 /** Set an action's status. Returns false if the durable write couldn't happen. */
@@ -333,6 +583,9 @@ export async function setActionStatus(id: string, status: ActionStatus): Promise
       // Leaving "waiting" clears the waiting metadata — a resolved Waiting-For isn't on anyone.
       waiting_on_text: status === "waiting" ? cur.waiting_on_text : null,
       waiting_since: status === "waiting" ? cur.waiting_since : null,
+      // A deliberate status decision supersedes a pending tickler date (setResurfaceDate is the
+      // path that sets both together). Undo restores the whole prior row, date included.
+      resurface_on: null,
       updated_at: nowIso(),
     };
     await putRowWithOutbox("actions", next);
@@ -446,6 +699,7 @@ export async function restoreContext(prev: Context): Promise<boolean> {
 export async function createProject(input: {
   title: string;
   source_capture_id?: string | null;
+  notes?: string | null;
 }): Promise<Project | null> {
   const title = input.title.trim();
   if (!title || !isGtdStorageAvailable()) return null;
@@ -472,6 +726,7 @@ export async function createProject(input: {
       created_at: now,
       updated_at: now,
       sort_order: Date.now(),
+      notes: input.notes?.trim() || null,
     };
     await putRowWithOutbox("projects", project);
     if (gen !== generation) return null;
@@ -561,9 +816,19 @@ export async function setProjectStatus(id: string, status: ProjectStatus): Promi
   }
 }
 
+/** The reference index — pointers to where things live, newest first. */
+export function useReferences(): readonly ReferenceItem[] {
+  useEffect(() => {
+    ensureInit().catch(() => {});
+  }, []);
+  return useSyncExternalStore(subscribe, () => referencesSnap, () => EMPTY_REFERENCES);
+}
+
 /** Create a reference item. Returns false if the durable write couldn't happen. */
 export async function createReference(input: {
   title: string;
+  url?: string | null;
+  project_id?: string | null;
   source_capture_id?: string | null;
 }): Promise<boolean> {
   const title = input.title.trim();
@@ -577,14 +842,78 @@ export async function createReference(input: {
       id: uuid(),
       title,
       body: null,
+      url: input.url?.trim() || null,
+      project_id: input.project_id ?? null,
+      archived: false,
       source_capture_id: input.source_capture_id ?? null,
       created_at: now,
       updated_at: now,
     };
     await putRowWithOutbox("reference_items", ref);
-    // References aren't listed yet (a later slice) — no in-memory snapshot to update.
+    if (gen !== generation) return false;
+    references.set(ref.id, ref);
+    notify();
+    broadcast();
     gtdSync.requestFlush();
-    return gen === generation;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Edit a reference (any of the three fields). Returns false on write failure. */
+export async function updateReference(
+  id: string,
+  patch: { title?: string; url?: string | null; project_id?: string | null },
+): Promise<boolean> {
+  const cur = references.get(id);
+  if (!cur) return false;
+  const title = patch.title?.trim() ?? cur.title;
+  if (!title) return false;
+  const gen = generation;
+  try {
+    const next: ReferenceItem = {
+      ...cur,
+      title,
+      url: patch.url === undefined ? cur.url : patch.url?.trim() || null,
+      project_id: patch.project_id === undefined ? cur.project_id : patch.project_id,
+      updated_at: nowIso(),
+    };
+    await putRowWithOutbox("reference_items", next);
+    if (gen !== generation) return false;
+    references.set(id, next);
+    notify();
+    broadcast();
+    gtdSync.requestFlush();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Archive (soft-delete) a reference — sync can't hard-delete, so removal is a flag. */
+export async function archiveReference(id: string): Promise<boolean> {
+  const cur = references.get(id);
+  if (!cur || cur.archived) return cur != null;
+  return writeReference({ ...cur, archived: true });
+}
+
+/** Put back a prior snapshot of a reference (the Undo path for archive). */
+export async function restoreReference(prev: ReferenceItem): Promise<boolean> {
+  return writeReference(prev);
+}
+
+async function writeReference(row: ReferenceItem): Promise<boolean> {
+  const gen = generation;
+  try {
+    const next: ReferenceItem = { ...row, updated_at: nowIso() };
+    await putRowWithOutbox("reference_items", next);
+    if (gen !== generation) return false;
+    references.set(next.id, next);
+    notify();
+    broadcast();
+    gtdSync.requestFlush();
+    return true;
   } catch {
     return false;
   }
@@ -598,9 +927,16 @@ export function resetGtdStore(): void {
   contexts.clear();
   actions.clear();
   projects.clear();
+  reviews.clear();
+  references.clear();
+  horizons.clear();
   actionsSnap = EMPTY_ACTIONS;
   contextsSnap = EMPTY_CONTEXTS;
   projectsSnap = EMPTY_PROJECTS;
+  referencesSnap = EMPTY_REFERENCES;
+  horizonsSnap = EMPTY_HORIZONS;
+  completionsSnap = EMPTY_COMPLETIONS;
+  lastReviewedSnap = null;
   initialized = false;
   initPromise = null;
   notify();

@@ -1,6 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { InboxList } from "@/components/InboxList";
 import { ResetLocalDataButton } from "@/components/ResetLocalDataButton";
+
+export const metadata: Metadata = {
+  title: "Inbox",
+  // Private screen — nothing here for a crawler (see app/robots.ts).
+  robots: { index: false, follow: false },
+};
 
 export default function InboxPage() {
   return (

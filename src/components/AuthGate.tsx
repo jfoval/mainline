@@ -9,8 +9,10 @@
  * account's captures can never appear under another on a shared device (DATA-MODEL §lifecycle).
  */
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import type { Session } from "@supabase/supabase-js";
 import { clearLocalData } from "@/lib/capture/session";
+import { isPublicRoute } from "@/lib/public-routes";
 import { getSupabase, isSupabaseEnabled } from "@/lib/supabase/client";
 import { SignIn } from "./SignIn";
 
@@ -23,8 +25,11 @@ type GateState =
   | { status: "error" };
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname(); // called unconditionally — the returns below are all after it
   // Backend off → no auth. Constant at build time, so the hook order below is stable.
   if (!isSupabaseEnabled()) return <>{children}</>;
+  // The guides are the public face of the app; they can't sit behind the sign-in they explain.
+  if (isPublicRoute(pathname)) return <>{children}</>;
   return <Gated>{children}</Gated>;
 }
 

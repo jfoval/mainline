@@ -7,7 +7,7 @@ export default function CapturePage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Capture</h1>
         <p className="mt-1 text-sm text-muted">
-          Get it out of your head. It saves instantly — even offline.
+          Get it out of your head. It saves instantly, even offline.
         </p>
       </div>
       <CaptureBox />

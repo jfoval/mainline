@@ -2,18 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-/** The app's sections — shared by this top nav (≥sm) and BottomNav (mobile). */
-export const NAV_ITEMS = [
-  { href: "/", label: "Capture" },
-  { href: "/inbox", label: "Inbox" },
-  { href: "/next", label: "Next" },
-  { href: "/projects", label: "Projects" },
-  { href: "/waiting", label: "Waiting" },
-  { href: "/someday", label: "Someday" },
-] as const;
-
-const items = NAV_ITEMS;
+import { NAV_ITEMS } from "@/lib/nav";
 
 /** Header nav. The active route is the only blue here; inactive items stay monochrome. */
 export function MainNav() {
@@ -22,7 +11,7 @@ export function MainNav() {
 
   return (
     <div className="flex items-center gap-1 text-sm">
-      {items.map((it) => {
+      {NAV_ITEMS.map((it) => {
         const active = it.href === "/" ? path === "/" : path.startsWith(it.href);
         return (
           <Link

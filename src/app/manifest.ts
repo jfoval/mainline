@@ -11,7 +11,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Mainline",
     short_name: "Mainline",
     description:
-      "Mainline — insanely easy capture for getting things done. Idea to captured in under two seconds, even offline.",
+      "Insanely easy capture for getting things done. Idea to captured in under two seconds, even offline.",
     id: `${bp}/`,
     start_url: `${bp}/`,
     scope: `${bp}/`,

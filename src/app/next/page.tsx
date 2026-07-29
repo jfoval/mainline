@@ -1,5 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { NextActionsList } from "@/components/NextActionsList";
+
+export const metadata: Metadata = {
+  title: "Next Actions",
+  // Private screen — nothing here for a crawler (see app/robots.ts).
+  robots: { index: false, follow: false },
+};
 
 export default function NextActionsPage() {
   return (

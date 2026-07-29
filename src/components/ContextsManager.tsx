@@ -31,7 +31,7 @@ export function ContextsManager() {
     const created = await createContext(name);
     setBusy(false);
     if (!created) {
-      setError("Couldn't save on this device — try again.");
+      setError("Couldn't save on this device. Try again.");
       return;
     }
     setName("");

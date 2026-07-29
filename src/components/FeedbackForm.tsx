@@ -31,7 +31,7 @@ export function FeedbackForm() {
       .insert({ kind, message: message.trim().slice(0, 4000) });
     setBusy(false);
     if (err) {
-      setError("Couldn't send — check your connection and try again.");
+      setError("Couldn't send. Check your connection and try again.");
       return;
     }
     setSent(true);
@@ -41,7 +41,7 @@ export function FeedbackForm() {
     return (
       <div className="flex flex-col items-start gap-3">
         <p className="text-[15px]">
-          Got it — thank you. {kind === "feature" ? "Every idea gets read." : "I'll take a look."}
+          Got it, thank you. {kind === "feature" ? "Every idea gets read." : "I'll take a look."}
         </p>
         <button
           type="button"

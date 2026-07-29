@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { NAV_ITEMS } from "./MainNav";
+import { NAV_ITEMS } from "@/lib/nav";
 
 /**
  * Mobile/narrow navigation: a fixed bottom tab bar (thumb-reachable, app-standard). Rendered
- * below the `lg` breakpoint — the top nav row (6 sections + Help + Sign out when signed in)
+ * below the `lg` breakpoint — the top nav row (7 sections + Help + Sign out when signed in)
  * only fits comfortably at lg+. The bar pads itself for the home-indicator safe area; the
  * page's <main> reserves matching bottom space so content never hides under it.
  */
@@ -91,10 +91,19 @@ function TabIcon({ name }: { name: (typeof NAV_ITEMS)[number]["label"] }) {
           <path d="M12 7v5l3 2" />
         </svg>
       );
-    case "Someday":
+    case "More":
       return (
         <svg {...common}>
-          <path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z" />
+          <circle cx="5" cy="12" r="1" />
+          <circle cx="12" cy="12" r="1" />
+          <circle cx="19" cy="12" r="1" />
+        </svg>
+      );
+    case "Review":
+      return (
+        <svg {...common}>
+          <path d="M20 12a8 8 0 1 1-2.3-5.6" />
+          <path d="M20 4v4h-4" />
         </svg>
       );
   }

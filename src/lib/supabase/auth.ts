@@ -46,7 +46,7 @@ export async function verifyEmailCode(email: string, code: string): Promise<stri
  */
 export async function verifyEmailLink(pastedUrl: string): Promise<string | null> {
   const token = pastedUrl.match(/[?&]token=([^&\s]+)/)?.[1];
-  if (!token) return "That doesn't look like a sign-in link — paste the whole link from the email.";
+  if (!token) return "That doesn't look like a sign-in link. Paste the whole link from the email.";
   const type = pastedUrl.match(/[?&]type=([^&\s]+)/)?.[1] ?? "magiclink";
   const { error } = await getSupabase().auth.verifyOtp({
     type: type as "magiclink",

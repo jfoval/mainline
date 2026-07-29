@@ -134,15 +134,15 @@ function micErrorMessage(code: string): string | null {
   switch (code) {
     case "not-allowed":
     case "service-not-allowed":
-      return "Mic blocked — allow microphone access for this site, then try again.";
+      return "Mic blocked. Allow microphone access for this site, then try again.";
     case "no-speech":
       return null; // heard nothing and gave up — not worth an error
     case "audio-capture":
       return "No microphone found on this device.";
     case "network":
-      return "Dictation needs a connection on this browser — type it instead.";
+      return "Dictation needs a connection on this browser. Type it instead.";
     default:
-      return "Dictation stopped — tap the mic to retry, or type.";
+      return "Dictation stopped. Tap the mic to retry, or type.";
   }
 }
 

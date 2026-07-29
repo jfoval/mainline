@@ -14,22 +14,41 @@
  */
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 import { normalizeIso, shouldAdopt } from "./sync-merge";
-import { DEFAULT_CONTEXTS, type Action, type Context, type Project, type ReferenceItem } from "./types";
+import {
+  DEFAULT_CONTEXTS,
+  type Action,
+  type Context,
+  type Project,
+  type Horizon,
+  type ReferenceItem,
+  type ReviewSession,
+} from "./types";
 
 const DB_NAME = "gtd-organize";
-const DB_VERSION = 5;
+const DB_VERSION = 10;
 
 /** Server-side table names. The references store predates the server naming — map via STORE_OF. */
-export type GtdTable = "contexts" | "projects" | "actions" | "reference_items";
-export type GtdRow = Action | Project | Context | ReferenceItem;
+export type GtdTable =
+  | "contexts"
+  | "projects"
+  | "actions"
+  | "reference_items"
+  | "review_sessions"
+  | "horizons";
+export type GtdRow = Action | Project | Context | ReferenceItem | ReviewSession | Horizon;
 
 const STORE_OF = {
   contexts: "contexts",
   projects: "projects",
   actions: "actions",
   reference_items: "references",
+  review_sessions: "review_sessions",
+  horizons: "horizons",
 } as const;
 type GtdStoreName = (typeof STORE_OF)[GtdTable];
+
+/** Every row store — the transaction scope for anything that touches "all synced rows". */
+const ROW_STORES = Object.values(STORE_OF) as GtdStoreName[];
 
 export interface GtdChange {
   table: GtdTable;
@@ -56,6 +75,8 @@ interface GtdDBSchema extends DBSchema {
     value: Project;
     indexes: { by_source: string };
   };
+  review_sessions: { key: string; value: ReviewSession };
+  horizons: { key: string; value: Horizon };
   outbox: { key: string; value: OutboxEntry };
   meta: { key: string; value: { key: string; value: unknown } };
 }
@@ -154,6 +175,48 @@ export function getGtdDB(): Promise<GtdDB> {
             cur = await cur.continue();
           }
         }
+        if (oldVersion < 6) {
+          // Weekly Review: one row per completed review (write-once, so no backfill needed).
+          db.createObjectStore("review_sessions", { keyPath: "id" });
+        }
+        if (oldVersion < 7) {
+          // Tickler dates. Backfill null so pre-v7 rows read as valid Actions.
+          let cur = await tx.objectStore("actions").openCursor();
+          while (cur) {
+            await cur.update({ ...cur.value, resurface_on: cur.value.resurface_on ?? null });
+            cur = await cur.continue();
+          }
+        }
+        if (oldVersion < 8) {
+          // Notes on actions and projects. Backfill null.
+          let act = await tx.objectStore("actions").openCursor();
+          while (act) {
+            await act.update({ ...act.value, notes: act.value.notes ?? null });
+            act = await act.continue();
+          }
+          let proj = await tx.objectStore("projects").openCursor();
+          while (proj) {
+            await proj.update({ ...proj.value, notes: proj.value.notes ?? null });
+            proj = await proj.continue();
+          }
+        }
+        if (oldVersion < 9) {
+          // References become a real, listed index: link + project tie + soft delete. Backfill.
+          let ref = await tx.objectStore("references").openCursor();
+          while (ref) {
+            await ref.update({
+              ...ref.value,
+              url: ref.value.url ?? null,
+              project_id: ref.value.project_id ?? null,
+              archived: ref.value.archived ?? false,
+            });
+            ref = await ref.continue();
+          }
+        }
+        if (oldVersion < 10) {
+          // Horizons of Focus — four prose rows, written on first edit (no seeding needed).
+          db.createObjectStore("horizons", { keyPath: "id" });
+        }
       },
     });
   }
@@ -187,7 +250,7 @@ export async function readOutbox(): Promise<{
   stamps: Map<string, string>;
 }> {
   const db = await getGtdDB();
-  const tx = db.transaction(["outbox", "contexts", "projects", "actions", "references"], "readonly");
+  const tx = db.transaction(["outbox", ...ROW_STORES], "readonly");
   const entries = await tx.objectStore("outbox").getAll();
   const changes: GtdChange[] = [];
   const stamps = new Map<string, string>();
@@ -209,7 +272,7 @@ export async function readOutbox(): Promise<{
 export async function clearOutboxIfUnchanged(stamps: Map<string, string>): Promise<void> {
   if (stamps.size === 0) return;
   const db = await getGtdDB();
-  const tx = db.transaction(["outbox", "contexts", "projects", "actions", "references"], "readwrite");
+  const tx = db.transaction(["outbox", ...ROW_STORES], "readwrite");
   const outbox = tx.objectStore("outbox");
   for (const [key, sentStamp] of stamps) {
     const entry = await outbox.get(key);
@@ -240,7 +303,7 @@ export async function setMeta(key: string, value: unknown): Promise<void> {
 export async function applyServerChanges(changes: GtdChange[]): Promise<GtdChange[]> {
   if (changes.length === 0) return [];
   const db = await getGtdDB();
-  const tx = db.transaction(["contexts", "projects", "actions", "references"], "readwrite");
+  const tx = db.transaction(ROW_STORES, "readwrite");
   const adopted: GtdChange[] = [];
   for (const change of changes) {
     const storeName = STORE_OF[change.table];
@@ -262,6 +325,11 @@ function normalizeRow({ table, row }: GtdChange): GtdChange {
     const a = r as Action;
     a.waiting_since = normalizeIso(a.waiting_since);
   }
+  if (table === "review_sessions") {
+    const s = r as ReviewSession;
+    s.started_at = normalizeIso(s.started_at);
+    s.completed_at = normalizeIso(s.completed_at);
+  }
   return { table, row: r };
 }
 
@@ -269,15 +337,9 @@ function normalizeRow({ table, row }: GtdChange): GtdChange {
  *  Includes outbox + meta so the next account starts with a clean queue and a zero watermark. */
 export async function clearGtdData(): Promise<void> {
   const db = await getGtdDB();
-  const tx = db.transaction(
-    ["actions", "contexts", "references", "projects", "outbox", "meta"],
-    "readwrite",
-  );
+  const tx = db.transaction([...ROW_STORES, "outbox", "meta"], "readwrite");
   await Promise.all([
-    tx.objectStore("actions").clear(),
-    tx.objectStore("contexts").clear(),
-    tx.objectStore("references").clear(),
-    tx.objectStore("projects").clear(),
+    ...ROW_STORES.map((s) => tx.objectStore(s).clear()),
     tx.objectStore("outbox").clear(),
     tx.objectStore("meta").clear(),
     tx.done,

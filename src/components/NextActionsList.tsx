@@ -1,18 +1,31 @@
 "use client";
 
-import { restoreAction, setActionStatus, useActions, useContexts, useProjects } from "@/lib/gtd/store";
+import {
+  restoreAction,
+  setActionNotes,
+  setActionStatus,
+  useActions,
+  useContexts,
+  useProjects,
+} from "@/lib/gtd/store";
 import type { Action, Context } from "@/lib/gtd/types";
 import { showUndo } from "@/lib/undo";
+import { CalendarHandoff } from "./CalendarHandoff";
+import { NotesField } from "./NotesField";
+import { ResurfacePicker } from "./ResurfacePicker";
 
 /**
  * Next Actions — what you can actually do, grouped by context (GTD's "engage" filter). Check one
  * off to mark it done. Someday/waiting/done items live elsewhere; this is the runway.
+ *
+ * Anything carrying a tickler date is off the runway by definition (waiting for its day, or
+ * already sitting in the inbox waiting to be decided) — see Action.resurface_on.
  */
 export function NextActionsList() {
   const actions = useActions();
   const contexts = useContexts();
   const projects = useProjects();
-  const active = actions.filter((a) => a.status === "active");
+  const active = actions.filter((a) => a.status === "active" && a.resurface_on == null);
 
   if (active.length === 0) {
     return (
@@ -55,7 +68,7 @@ export function NextActionsList() {
 
 function ActionRow({ action, projectTitle }: { action: Action; projectTitle?: string }) {
   return (
-    <li className="flex items-start gap-3 py-3">
+    <li className="flex flex-wrap items-start gap-3 py-3">
       <button
         type="button"
         aria-label="Mark done"
@@ -79,6 +92,17 @@ function ActionRow({ action, projectTitle }: { action: Action; projectTitle?: st
             {projectTitle}
           </span>
         )}
+        <NotesField
+          notes={action.notes}
+          label={`Notes for ${action.title}`}
+          onSave={(next) => setActionNotes(action.id, next)}
+        />
+      </div>
+      {/* Full width below sm so the two controls drop onto their own line instead of
+          squeezing the action title into two or three words per line on a phone. */}
+      <div className="flex w-full flex-wrap items-start justify-end gap-2 sm:w-auto">
+        <CalendarHandoff action={action} />
+        <ResurfacePicker action={action} label="Not yet…" />
       </div>
     </li>
   );

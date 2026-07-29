@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
 import { ContextsManager } from "@/components/ContextsManager";
+
+export const metadata: Metadata = {
+  title: "Contexts",
+  // Private screen — nothing here for a crawler (see app/robots.ts).
+  robots: { index: false, follow: false },
+};
 
 export default function ContextsPage() {
   return (
@@ -6,7 +13,7 @@ export default function ContextsPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Contexts</h1>
         <p className="mt-1 text-sm text-muted">
-          Where — or with whom — you can do things: @computer, @errands, a person you meet with.
+          Where you can do things, or with whom: @computer, @errands, a person you meet with.
           Everyone buckets differently; keep as few as your life actually needs.
         </p>
       </div>

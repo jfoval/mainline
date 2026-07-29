@@ -6,6 +6,7 @@ import { AuthGate } from "@/components/AuthGate";
 import { AuthStatus } from "@/components/AuthStatus";
 import { BottomNav } from "@/components/BottomNav";
 import { MainNav } from "@/components/MainNav";
+import { NavGate } from "@/components/NavGate";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
 import { UndoToast } from "@/components/UndoToast";
 
@@ -13,11 +14,32 @@ import { UndoToast } from "@/components/UndoToast";
 // injected automatically from app/manifest.ts (already basePath-aware), so it's omitted here.
 const bp = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
+/** Where the site actually lives — makes every relative metadata URL below absolute, which is
+ *  what unfurlers (search, iMessage, Slack) require. Overridable for a preview deploy. */
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://mainline.support";
+
+const DESCRIPTION =
+  "Mainline is a calm place to put everything on your mind: capture in a tap (even offline), " +
+  "decide what each thing is once, and see only what you can do right now.";
+
 export const metadata: Metadata = {
-  title: "Mainline",
-  description:
-    "Mainline — insanely easy capture for getting things done. Idea to captured in under two seconds, even offline.",
+  metadataBase: new URL(SITE_URL),
+  // Sub-pages set their own title; this frames it so a search result reads "Set up Mainline — Mainline".
+  title: {
+    default: "Mainline: get everything out of your head",
+    template: "%s · Mainline",
+  },
+  description: DESCRIPTION,
   applicationName: "Mainline",
+  keywords: [
+    "getting things done",
+    "GTD app",
+    "task capture",
+    "next actions",
+    "weekly review",
+    "offline to-do app",
+  ],
+  alternates: { canonical: "/" },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -26,6 +48,20 @@ export const metadata: Metadata = {
   icons: {
     icon: `${bp}/icon-192.png`,
     apple: `${bp}/apple-touch-icon.png`,
+  },
+  openGraph: {
+    type: "website",
+    siteName: "Mainline",
+    title: "Mainline: get everything out of your head",
+    description: DESCRIPTION,
+    url: "/",
+    images: [{ url: `${bp}/og.png`, width: 1200, height: 630, alt: "Mainline" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Mainline: get everything out of your head",
+    description: DESCRIPTION,
+    images: [`${bp}/og.png`],
   },
 };
 
@@ -63,20 +99,23 @@ export default function RootLayout({
               <span className="text-lg font-semibold tracking-tight">Mainline</span>
             </Link>
             <div className="flex items-center gap-1">
-              {/* Top nav needs lg+ to fit all items comfortably; below that the bottom tab bar
-                  navigates (tablets included — thumb-friendly there anyway). */}
-              <div className="hidden lg:block">
-                <MainNav />
-              </div>
-              {/* Support/feature tickets need the backend — hidden in offline builds. */}
-              {process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? (
-                <Link
-                  href="/help"
-                  className="whitespace-nowrap rounded-md px-2.5 py-1.5 text-sm text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
-                >
-                  Help
-                </Link>
-              ) : null}
+              <NavGate>
+                {/* Top nav needs lg+ to fit all items comfortably; below that the bottom tab bar
+                    navigates (tablets included — thumb-friendly there anyway). */}
+                <div className="hidden lg:block">
+                  <MainNav />
+                </div>
+                {/* Support/feature tickets need the backend — hidden in offline builds. */}
+                {process.env.NEXT_PUBLIC_SUPABASE_URL &&
+                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? (
+                  <Link
+                    href="/help"
+                    className="whitespace-nowrap rounded-md px-2.5 py-1.5 text-sm text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+                  >
+                    Help
+                  </Link>
+                ) : null}
+              </NavGate>
               <AuthStatus />
             </div>
           </nav>
@@ -85,7 +124,9 @@ export default function RootLayout({
         <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 pt-6 pb-24 lg:pb-6">
           <AuthGate>{children}</AuthGate>
         </main>
-        <BottomNav />
+        <NavGate>
+          <BottomNav />
+        </NavGate>
         <UndoToast />
         <ServiceWorkerRegistrar />
       </body>

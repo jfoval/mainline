@@ -66,6 +66,15 @@ export interface Action {
   updated_at: string;
   /** stable list ordering. */
   sort_order: number;
+  /**
+   * Tickler (GTD's 43 folders): a LOCAL calendar day, "YYYY-MM-DD" — not a timestamp, because
+   * "resurfaces Tuesday morning" means your Tuesday, wherever you are. While it's set the item
+   * is off the runway entirely; on the day it reappears in the inbox to be decided fresh
+   * (deciding clears the date). Null = no tickler, the normal case.
+   */
+  resurface_on: string | null;
+  /** Free text hung off the item — the thinking, not the doing. Null = none. */
+  notes: string | null;
 }
 
 /** projects.status (DATA-MODEL §projects). Manual slice uses these three;
@@ -83,13 +92,89 @@ export interface Project {
   created_at: string;
   updated_at: string;
   sort_order: number;
+  /** Free text hung off the outcome — where a someday item's thinking lands when it grows up
+   *  into a project (see promoteToProject). Null = none. */
+  notes: string | null;
 }
 
-/** Non-actionable keep (DATA-MODEL §reference_items). Minimal for the manual engine. */
+/**
+ * Horizons of Focus (FOUNDATIONS §2, the altitude model above Projects). Four plain prose
+ * sections, one row each so two devices editing different horizons both keep their work — the
+ * ids are CANONICAL constants for the same reason contexts' are: every device writes the same
+ * four rows, so sync merges instead of duplicating.
+ */
+export type HorizonKey = "purpose" | "vision" | "goals" | "areas";
+
+export interface Horizon {
+  id: string;
+  key: HorizonKey;
+  body: string;
+  /** LWW clock for sync (newest row wins across devices). */
+  updated_at: string;
+}
+
+export const HORIZONS: ReadonlyArray<{
+  id: string;
+  key: HorizonKey;
+  title: string;
+  hint: string;
+}> = [
+  {
+    id: "8c31d5a0-0000-4000-8000-000000000001",
+    key: "purpose",
+    title: "Purpose & principles",
+    hint: "Why you're here, and the lines you won't cross. 50,000 feet.",
+  },
+  {
+    id: "8c31d5a0-0000-4000-8000-000000000002",
+    key: "vision",
+    title: "Vision",
+    hint: "What wild success looks like in three to five years. 40,000 feet.",
+  },
+  {
+    id: "8c31d5a0-0000-4000-8000-000000000003",
+    key: "goals",
+    title: "Goals",
+    hint: "What you want true within a year or two. 30,000 feet.",
+  },
+  {
+    id: "8c31d5a0-0000-4000-8000-000000000004",
+    key: "areas",
+    title: "Areas of focus",
+    hint: "The standing hats you wear: work, health, family, money. 20,000 feet.",
+  },
+];
+
+/**
+ * One COMPLETED weekly review (DATA-MODEL §review_sessions, trimmed to what the guided flow
+ * actually needs). Rows are written once, at the finish line, and never edited — so LWW sync
+ * has nothing to resolve and "last reviewed" is simply the newest `completed_at` on the device.
+ * In-progress step state stays in React: a review is short, and a half-finished one isn't a fact
+ * worth syncing.
+ */
+export interface ReviewSession {
+  id: string;
+  started_at: string;
+  completed_at: string;
+  /** LWW clock for sync (= completed_at; rows are immutable). */
+  updated_at: string;
+}
+
+/**
+ * Non-actionable keep (DATA-MODEL §reference_items) — a POINTER, not a vault. The title is the
+ * line you'd tell yourself ("Warranty — Gmail, search Dyson"); the optional link and project tie
+ * are the two things worth structuring. The stuff itself stays where it already lives.
+ */
 export interface ReferenceItem {
   id: string;
   title: string;
   body: string | null;
+  /** Optional link to wherever it actually is. */
+  url: string | null;
+  /** Optional tie to the project it belongs to. */
+  project_id: string | null;
+  /** Soft delete — same reason as contexts: LWW can't hard-delete across devices. */
+  archived: boolean;
   source_capture_id: string | null;
   created_at: string;
   /** LWW clock for sync (newest row wins across devices). */

@@ -2,9 +2,16 @@ import { describe, expect, it } from "vitest";
 import type { Action, Project } from "./types";
 import {
   currentActionFor,
+  dayKey,
+  dayKeyPlus,
+  isDeferred,
+  isFirstReviewOfMonth,
   openActionsFor,
   projectNeedsNextAction,
   projectProgress,
+  resurfaceLabel,
+  resurfacedActions,
+  reviewFreshness,
   waitingAgeLabel,
 } from "./views";
 
@@ -23,6 +30,8 @@ function action(overrides: Partial<Action>): Action {
     created_at: "2026-07-01T00:00:00.000Z",
     updated_at: "2026-07-01T00:00:00.000Z",
     sort_order: 1,
+    resurface_on: null,
+    notes: null,
     ...overrides,
   };
 }
@@ -36,6 +45,7 @@ function project(overrides: Partial<Project>): Project {
     created_at: "2026-07-01T00:00:00.000Z",
     updated_at: "2026-07-01T00:00:00.000Z",
     sort_order: 1,
+    notes: null,
     ...overrides,
   };
 }
@@ -143,5 +153,95 @@ describe("waitingAgeLabel", () => {
   it("is empty for a malformed timestamp and 'today' for a future one", () => {
     expect(waitingAgeLabel("not-a-date", now)).toBe("");
     expect(waitingAgeLabel("2026-08-01T00:00:00.000Z", now)).toBe("today");
+  });
+});
+
+describe("reviewFreshness", () => {
+  const now = new Date("2026-07-29T12:00:00.000Z");
+
+  it("treats never-reviewed as due", () => {
+    expect(reviewFreshness(null, now)).toEqual({ label: "Not reviewed yet", due: true });
+  });
+
+  it("reads fresh up to six days and goes due at seven", () => {
+    expect(reviewFreshness("2026-07-29T08:00:00.000Z", now)).toEqual({
+      label: "Last reviewed today",
+      due: false,
+    });
+    expect(reviewFreshness("2026-07-28T08:00:00.000Z", now)).toEqual({
+      label: "Last reviewed yesterday",
+      due: false,
+    });
+    expect(reviewFreshness("2026-07-23T13:00:00.000Z", now)).toEqual({
+      label: "Last reviewed 5 days ago",
+      due: false,
+    });
+    expect(reviewFreshness("2026-07-22T11:00:00.000Z", now)).toEqual({
+      label: "Last reviewed 7 days ago",
+      due: true,
+    });
+  });
+
+  it("degrades to due on a malformed or future stamp", () => {
+    expect(reviewFreshness("not-a-date", now).due).toBe(true);
+    expect(reviewFreshness("2026-08-05T00:00:00.000Z", now).due).toBe(true);
+  });
+});
+
+describe("tickler dates", () => {
+  it("builds local day keys, including across a month boundary", () => {
+    // Local-time constructor on purpose: the key must be the user's calendar day.
+    expect(dayKey(new Date(2026, 7, 9, 23, 30))).toBe("2026-08-09");
+    expect(dayKeyPlus(new Date(2026, 6, 29), 3)).toBe("2026-08-01");
+    expect(dayKeyPlus(new Date(2026, 11, 31), 1)).toBe("2027-01-01");
+  });
+
+  it("defers only future dates", () => {
+    const today = "2026-07-29";
+    expect(isDeferred(action({ resurface_on: "2026-07-30" }), today)).toBe(true);
+    expect(isDeferred(action({ resurface_on: "2026-07-29" }), today)).toBe(false);
+    expect(isDeferred(action({ resurface_on: null }), today)).toBe(false);
+  });
+
+  it("resurfaces due items oldest-date first, ignoring done/dropped/waiting ones", () => {
+    const today = "2026-07-29";
+    const acts = [
+      action({ id: "b", resurface_on: "2026-07-29", status: "someday" }),
+      action({ id: "a", resurface_on: "2026-07-20", status: "active" }),
+      action({ id: "future", resurface_on: "2026-08-20", status: "active" }),
+      action({ id: "done", resurface_on: "2026-07-01", status: "done" }),
+      action({ id: "plain", resurface_on: null, status: "active" }),
+    ];
+    expect(resurfacedActions(acts, today).map((a) => a.id)).toEqual(["a", "b"]);
+  });
+
+  it("labels a pending date in human terms", () => {
+    const today = "2026-07-29";
+    expect(resurfaceLabel("2026-07-29", today)).toBe("today");
+    expect(resurfaceLabel("2026-07-30", today)).toBe("tomorrow");
+    expect(resurfaceLabel("2026-08-01", today)).toBe("in 3 days");
+    expect(resurfaceLabel("2026-08-20", today)).toBe("20 Aug");
+    expect(resurfaceLabel("garbage", today)).toBe("garbage");
+  });
+});
+
+describe("isFirstReviewOfMonth", () => {
+  const now = new Date(2026, 7, 14); // 14 Aug 2026, local
+
+  it("is true with no reviews at all", () => {
+    expect(isFirstReviewOfMonth([], now)).toBe(true);
+  });
+
+  it("is true when the only reviews were in earlier months", () => {
+    expect(isFirstReviewOfMonth([new Date(2026, 6, 31).toISOString()], now)).toBe(true);
+    expect(isFirstReviewOfMonth([new Date(2025, 7, 14).toISOString()], now)).toBe(true);
+  });
+
+  it("is false once a review lands in the same month", () => {
+    expect(isFirstReviewOfMonth([new Date(2026, 7, 1).toISOString()], now)).toBe(false);
+  });
+
+  it("ignores unparseable stamps", () => {
+    expect(isFirstReviewOfMonth(["nonsense"], now)).toBe(true);
   });
 });

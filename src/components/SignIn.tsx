@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { sendMagicLink, verifyEmailCode, verifyEmailLink } from "@/lib/supabase/auth";
 
 /**
@@ -49,18 +50,17 @@ export function SignIn() {
       <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-3 text-center">
         <h1 className="text-2xl font-semibold tracking-tight">Check your email</h1>
         <p className="text-sm text-muted">
-          We emailed <span className="text-foreground">{email.trim()}</span> a sign-in link. Tap
-          it on this device — or, in the installed app (where links can&apos;t open),
-          <span className="text-foreground"> press and hold the link in the email, copy it, and
-          paste it below</span>.
+          We emailed <span className="text-foreground">{email.trim()}</span> a six-digit code and
+          a link. <span className="text-foreground">Type the code below</span>. That works
+          everywhere, including the installed app. Tapping the link works too, in a browser.
         </p>
         <form onSubmit={verify} className="flex flex-col gap-3">
           <input
             autoComplete="one-time-code"
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            placeholder="Paste the sign-in link (or code)"
-            aria-label="Sign-in link or code"
+            placeholder="6-digit code (or paste the link)"
+            aria-label="Sign-in code or link"
             className="rounded-[10px] border border-border bg-surface px-3 py-2.5 text-center text-[15px] outline-none placeholder:text-muted focus:border-border-strong"
           />
           {error && <p className="text-sm text-danger">{error}</p>}
@@ -88,13 +88,19 @@ export function SignIn() {
   }
 
   return (
-    <div className="mx-auto flex max-w-sm flex-1 flex-col justify-center gap-4">
+    <div className="mx-auto flex max-w-sm flex-1 flex-col justify-center gap-6 py-8">
+      {/* The landing page and the sign-in page are the same page on purpose: a stranger gets one
+          clear line, one paragraph and a way in — nothing to scroll past, nothing to close. */}
       <div className="text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">Sign in to Mainline</h1>
-        <p className="mt-1 text-sm text-muted">
-          Your whole system syncs across your devices. No password — we email you a link.
+        <h1 className="text-3xl font-semibold leading-tight tracking-tight">
+          Get everything out of your head.
+        </h1>
+        <p className="mt-3 text-[15px] leading-relaxed text-muted">
+          Mainline catches whatever you&apos;re carrying, in a tap and even offline, then helps you
+          decide what each thing actually is, so you only ever look at what you can do right now.
         </p>
       </div>
+
       <form onSubmit={submit} className="flex flex-col gap-3">
         <input
           type="email"
@@ -112,9 +118,21 @@ export function SignIn() {
           disabled={busy || !email.trim()}
           className="btn-accent rounded-lg px-5 py-2.5 font-medium"
         >
-          {busy ? "Sending…" : "Send magic link"}
+          {busy ? "Sending…" : "Send me a sign-in code"}
         </button>
+        <p className="text-center text-xs text-tertiary">
+          No password. We email you a code (and a link) each time you sign in on a new device.
+        </p>
       </form>
+
+      <div className="flex items-center justify-center gap-5 text-sm">
+        <Link href="/setup" className="text-accent-link underline-offset-4 hover:underline">
+          How to set up
+        </Link>
+        <Link href="/guide" className="text-accent-link underline-offset-4 hover:underline">
+          How it works
+        </Link>
+      </div>
     </div>
   );
 }

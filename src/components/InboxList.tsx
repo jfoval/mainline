@@ -9,20 +9,28 @@ import {
 } from "@/lib/capture/pending-discard";
 import { editCapture, useCaptures } from "@/lib/capture/store";
 import type { Capture } from "@/lib/capture/types";
+import { useActions } from "@/lib/gtd/store";
+import { dayKey, resurfacedActions } from "@/lib/gtd/views";
 import { isSupabaseEnabled } from "@/lib/supabase/client";
 import { showUndo } from "@/lib/undo";
 import { ClarifyPanel } from "./ClarifyPanel";
+import { ResurfacedList } from "./ResurfacedList";
 
 /** Inbox — items still awaiting clarification (status=inbox), newest first. Clarify moves an
  *  item to processed/discarded so it leaves the inbox; edit + delete exercise the op-log too.
  *  Deletes are deferred behind the Undo toast (the sync tombstone is irreversible once shipped),
- *  so pending ones are hidden here rather than already gone. */
+ *  so pending ones are hidden here rather than already gone.
+ *
+ *  Tickler items whose day has come are part of the inbox too (they head the list) — so "inbox
+ *  zero" means both are empty, not just the captures. */
 export function InboxList() {
   const captures = useCaptures();
   const pendingDeletes = usePendingDiscards();
+  const actions = useActions();
   const items = captures.filter((c) => c.status === "inbox" && !pendingDeletes.has(c.client_id));
+  const due = resurfacedActions(actions, dayKey(new Date()));
 
-  if (items.length === 0) {
+  if (items.length === 0 && due.length === 0) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-2 py-20 text-center">
         <p className="text-lg font-medium">Inbox zero</p>
@@ -34,11 +42,14 @@ export function InboxList() {
   }
 
   return (
-    <ul className="divide-y divide-border">
-      {items.map((capture) => (
-        <CaptureRow key={capture.client_id} capture={capture} />
-      ))}
-    </ul>
+    <div className="flex flex-col gap-4">
+      <ResurfacedList />
+      <ul className="divide-y divide-border">
+        {items.map((capture) => (
+          <CaptureRow key={capture.client_id} capture={capture} />
+        ))}
+      </ul>
+    </div>
   );
 }
 

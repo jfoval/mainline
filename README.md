@@ -112,11 +112,15 @@ this order:
   (`node scripts/gen-og-image.mjs`), `robots.txt` + `sitemap.xml`, and `noindex` on every private
   screen.
 
-> **Not yet applied to production:** migrations `0006`–`0010` (paste each into the Supabase SQL
-> editor, in order — each one replaces `sync_gtd` wholesale, so order matters), and the Supabase
-> Magic Link email template still needs a link to `https://mainline.support/setup`. Until `0006`+
-> land, the new tables/columns simply don't sync — the client keeps working locally, because
-> `sync_gtd` ignores table names it doesn't know.
+**Shipped to production (2026-07-29).** Migrations `0006`–`0010` are applied and verified live
+(both new tables present, every new column present, `sync_gtd` carrying the horizons branch *and*
+still keeping `contexts.archived`), the Supabase Magic Link template now links to
+`https://mainline.support/setup`, and the build is deployed. Note for the next migration: each one
+replaces `sync_gtd` wholesale, so **always base a new version on the most recent migration** —
+rebuilding from an older one silently drops whatever the versions in between added.
+
+**House style:** no em dashes in user-facing copy (UI strings, guides, metadata, emails). Code
+comments are exempt.
 
 Health: `tsc` · `eslint` · `next build` (env-absent export) · 59 tests · live Supabase harness — all green.
 

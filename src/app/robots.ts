@@ -26,6 +26,7 @@ export default function robots(): MetadataRoute.Robots {
           "/horizons",
           "/contexts",
           "/more",
+          "/guides", // the in-app signpost; the guides themselves are indexed
           "/help",
         ],
       },

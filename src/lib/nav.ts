@@ -21,4 +21,5 @@ export const MORE_ITEMS = [
   { href: "/reference", label: "Reference", hint: "Where things live, not the things." },
   { href: "/horizons", label: "Horizons", hint: "Purpose, vision, goals, areas of focus." },
   { href: "/contexts", label: "Contexts", hint: "Your @home, @errands, @anyone list." },
+  { href: "/guides", label: "Guides", hint: "How the app works, the method, and installing it." },
 ] as const;

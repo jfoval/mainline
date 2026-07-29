@@ -111,7 +111,7 @@ function NewProjectForm({ contexts }: { contexts: readonly Context[] }) {
           value={outcome}
           onChange={(e) => setOutcome(e.target.value)}
           placeholder="e.g. Maui trip booked"
-          className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-border-strong"
+          className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-accent"
         />
         <label className="text-sm text-muted" htmlFor="np-first">
           And the very next physical action?
@@ -121,7 +121,7 @@ function NewProjectForm({ contexts }: { contexts: readonly Context[] }) {
           value={firstAction}
           onChange={(e) => setFirstAction(e.target.value)}
           placeholder="e.g. Email venue re: availability"
-          className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-border-strong"
+          className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-accent"
         />
         <ContextChips contexts={contexts} contextId={contextId} onSelect={setSelectedContextId} />
         {error && <p className="text-sm text-danger">{error}</p>}
@@ -229,7 +229,7 @@ function TitleRow({ project }: { project: Project }) {
             if (e.key === "Escape") setEditing(false);
           }}
           aria-label="Project outcome"
-          className="min-w-0 flex-1 rounded-[10px] border border-border bg-surface-2 px-3 py-1.5 text-[15px] font-medium outline-none focus:border-border-strong"
+          className="min-w-0 flex-1 rounded-[10px] border border-border bg-surface-2 px-3 py-1.5 text-[15px] font-medium outline-none focus:border-accent"
         />
         <button type="button" onClick={() => void save()} className="btn-accent rounded-lg px-3 py-1.5 text-sm font-medium">
           Save
@@ -340,13 +340,13 @@ function AddActionRow({
           }}
           placeholder="Add a next action (verb-first)"
           aria-label={`Next action for ${project.title}`}
-          className="min-w-0 flex-1 rounded-[10px] border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-border-strong"
+          className="min-w-0 flex-1 rounded-[10px] border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-accent"
         />
         <select
           value={contextId ?? ""}
           onChange={(e) => setSelectedContextId(e.target.value)}
           aria-label="Context"
-          className="rounded-[10px] border border-border bg-surface px-2 py-2 text-sm text-muted outline-none focus:border-border-strong"
+          className="rounded-[10px] border border-border bg-surface px-2 py-2 text-sm text-muted outline-none focus:border-accent"
         >
           {contexts.map((c) => (
             <option key={c.id} value={c.id}>

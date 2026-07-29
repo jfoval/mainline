@@ -50,7 +50,7 @@ export function ReferenceIndex() {
           placeholder="Search the index"
           aria-label="Search reference"
           type="search"
-          className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-border-strong"
+          className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-accent"
         />
       )}
 
@@ -131,7 +131,7 @@ function NewReferenceForm({ projects }: { projects: readonly Project[] }) {
           if (e.key === "Enter") void create();
         }}
         placeholder="e.g. Warranty: Gmail, search Dyson"
-        className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-border-strong"
+        className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-accent"
       />
       <label className="text-sm text-muted" htmlFor="ref-url">
         Link (optional)
@@ -142,7 +142,7 @@ function NewReferenceForm({ projects }: { projects: readonly Project[] }) {
         onChange={(e) => setUrl(e.target.value)}
         inputMode="url"
         placeholder="https://…"
-        className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-border-strong"
+        className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-accent"
       />
       {active.length > 0 && (
         <>
@@ -153,7 +153,7 @@ function NewReferenceForm({ projects }: { projects: readonly Project[] }) {
             id="ref-project"
             value={projectId}
             onChange={(e) => setProjectId(e.target.value)}
-            className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] text-muted outline-none focus:border-border-strong"
+            className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] text-muted outline-none focus:border-accent"
           >
             <option value="">No project</option>
             {active.map((p) => (
@@ -218,7 +218,7 @@ function ReferenceRow({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           aria-label="Reference line"
-          className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-border-strong"
+          className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-accent"
         />
         <input
           value={url}
@@ -226,14 +226,14 @@ function ReferenceRow({
           inputMode="url"
           placeholder="https://…"
           aria-label="Link"
-          className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-border-strong"
+          className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-accent"
         />
         {active.length > 0 && (
           <select
             value={projectId}
             onChange={(e) => setProjectId(e.target.value)}
             aria-label="Project"
-            className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] text-muted outline-none focus:border-border-strong"
+            className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] text-muted outline-none focus:border-accent"
           >
             <option value="">No project</option>
             {active.map((p) => (

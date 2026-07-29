@@ -95,7 +95,7 @@ export function FeedbackForm() {
             : "What would make Mainline better for you?"
         }
         aria-label="Your message"
-        className="w-full resize-none rounded-[10px] border border-border bg-surface p-3 text-[15px] leading-relaxed outline-none placeholder:text-muted focus:border-border-strong"
+        className="w-full resize-none rounded-[10px] border border-border bg-surface p-3 text-[15px] leading-relaxed outline-none placeholder:text-muted focus:border-accent"
       />
       {error && <p className="text-sm text-danger">{error}</p>}
       <button

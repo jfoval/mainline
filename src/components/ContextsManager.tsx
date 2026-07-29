@@ -52,7 +52,7 @@ export function ContextsManager() {
           }}
           placeholder="e.g. @work, @errands, @ Sarah"
           aria-label="New context name"
-          className="min-w-0 flex-1 rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none placeholder:text-muted focus:border-border-strong"
+          className="min-w-0 flex-1 rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none placeholder:text-muted focus:border-accent"
         />
         <button
           type="button"
@@ -115,7 +115,7 @@ function ContextRow({
             if (e.key === "Escape") setEditing(false);
           }}
           aria-label={`Rename ${context.name}`}
-          className="min-w-0 flex-1 rounded-[10px] border border-border bg-surface-2 px-3 py-1.5 text-[15px] outline-none focus:border-border-strong"
+          className="min-w-0 flex-1 rounded-[10px] border border-border bg-surface-2 px-3 py-1.5 text-[15px] outline-none focus:border-accent"
         />
         <button type="button" onClick={() => void save()} className="btn-accent rounded-lg px-3 py-1.5 text-sm font-medium">
           Save

@@ -163,7 +163,7 @@ function PromotePanel({
         autoFocus
         value={outcome}
         onChange={(e) => setOutcome(e.target.value)}
-        className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-border-strong"
+        className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-accent"
       />
       <label className="text-sm text-muted" htmlFor={`promote-first-${action.id}`}>
         And the very next physical action?
@@ -173,7 +173,7 @@ function PromotePanel({
         value={firstAction}
         onChange={(e) => setFirstAction(e.target.value)}
         placeholder="e.g. Book the intro lesson"
-        className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-border-strong"
+        className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-accent"
       />
       <ContextChips contexts={contexts} contextId={contextId} onSelect={setSelectedContextId} />
       {action.notes && <p className="text-xs text-tertiary">Your notes come with it.</p>}

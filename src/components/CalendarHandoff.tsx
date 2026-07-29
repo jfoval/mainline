@@ -79,7 +79,7 @@ export function CalendarHandoff({ action }: { action: Action }) {
             setHandedOff(false);
           }}
           aria-label={`Calendar date for ${action.title}`}
-          className="rounded-[10px] border border-border bg-surface px-3 py-1.5 text-sm outline-none focus:border-border-strong"
+          className="rounded-[10px] border border-border bg-surface px-3 py-1.5 text-sm outline-none focus:border-accent"
         />
         <input
           type="time"
@@ -89,7 +89,7 @@ export function CalendarHandoff({ action }: { action: Action }) {
             setHandedOff(false);
           }}
           aria-label={`Time (optional) for ${action.title}`}
-          className="rounded-[10px] border border-border bg-surface px-3 py-1.5 text-sm outline-none focus:border-border-strong"
+          className="rounded-[10px] border border-border bg-surface px-3 py-1.5 text-sm outline-none focus:border-accent"
         />
         <span className="text-xs text-tertiary">{time ? "1 hour" : "all day"}</span>
       </div>

@@ -61,7 +61,7 @@ export function SignIn() {
             onChange={(e) => setCode(e.target.value)}
             placeholder="6-digit code (or paste the link)"
             aria-label="Sign-in code or link"
-            className="rounded-[10px] border border-border bg-surface px-3 py-2.5 text-center text-[15px] outline-none placeholder:text-muted focus:border-border-strong"
+            className="rounded-[10px] border border-border bg-surface px-3 py-2.5 text-center text-[15px] outline-none placeholder:text-muted focus:border-accent"
           />
           {error && <p className="text-sm text-danger">{error}</p>}
           <button
@@ -110,7 +110,7 @@ export function SignIn() {
           onChange={(e) => setEmail(e.target.value)}
           placeholder="you@example.com"
           aria-label="Email address"
-          className="rounded-[10px] border border-border bg-surface px-3 py-2.5 text-base outline-none placeholder:text-muted focus:border-border-strong"
+          className="rounded-[10px] border border-border bg-surface px-3 py-2.5 text-base outline-none placeholder:text-muted focus:border-accent"
         />
         {error && <p className="text-sm text-danger">{error}</p>}
         <button

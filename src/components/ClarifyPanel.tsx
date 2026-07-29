@@ -183,7 +183,7 @@ export function ClarifyPanel({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g. Email venue re: availability"
-            className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-border-strong"
+            className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-accent"
           />
           <ContextChips contexts={contexts} contextId={contextId} onSelect={setSelectedContextId} />
           <label className="flex items-center gap-2 text-sm text-muted">
@@ -232,7 +232,7 @@ export function ClarifyPanel({
             value={projectTitle}
             onChange={(e) => setProjectTitle(e.target.value)}
             placeholder="e.g. Maui trip booked"
-            className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-border-strong"
+            className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-accent"
           />
           <label className="text-sm text-muted" htmlFor="proj-first">
             And the very next physical action?
@@ -242,7 +242,7 @@ export function ClarifyPanel({
             value={firstAction}
             onChange={(e) => setFirstAction(e.target.value)}
             placeholder="e.g. Email venue re: availability"
-            className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-border-strong"
+            className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-accent"
           />
           <ContextChips contexts={contexts} contextId={contextId} onSelect={setSelectedContextId} />
           <div className="flex items-center justify-end gap-2 text-sm">
@@ -271,7 +271,7 @@ export function ClarifyPanel({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g. Sarah sends the venue quote"
-            className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-border-strong"
+            className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-accent"
           />
           <label className="text-sm text-muted" htmlFor="wf-on">
             Who or what is it on? (optional)
@@ -281,7 +281,7 @@ export function ClarifyPanel({
             value={waitingOn}
             onChange={(e) => setWaitingOn(e.target.value)}
             placeholder="e.g. Sarah"
-            className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-border-strong"
+            className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-accent"
           />
           <div className="flex items-center justify-end gap-2 text-sm">
             <button type="button" onClick={() => setStep("yes")} className="rounded-lg px-3 py-2 text-muted hover:text-foreground">

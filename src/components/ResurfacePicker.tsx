@@ -64,7 +64,7 @@ export function ResurfacePicker({
           min={today}
           onChange={(e) => setCustom(e.target.value)}
           aria-label={`Resurface date for ${action.title}`}
-          className="rounded-[10px] border border-border bg-surface px-3 py-1.5 text-sm outline-none focus:border-border-strong"
+          className="rounded-[10px] border border-border bg-surface px-3 py-1.5 text-sm outline-none focus:border-accent"
         />
         <button
           type="button"

@@ -4,13 +4,13 @@ import { normalizeUrl } from "./url";
 describe("normalizeUrl", () => {
   it("adds https to a bare host, which is what people actually type", () => {
     // The reported bug: no scheme means a RELATIVE link, so it 404s on our own domain.
-    expect(normalizeUrl("www.nurik.ai")).toBe("https://www.nurik.ai");
-    expect(normalizeUrl("nurik.ai")).toBe("https://nurik.ai");
-    expect(normalizeUrl("nurik.ai/pricing?ref=1")).toBe("https://nurik.ai/pricing?ref=1");
+    expect(normalizeUrl("www.example.com")).toBe("https://www.example.com");
+    expect(normalizeUrl("example.com")).toBe("https://example.com");
+    expect(normalizeUrl("example.com/pricing?ref=1")).toBe("https://example.com/pricing?ref=1");
   });
 
   it("leaves an explicit scheme alone", () => {
-    expect(normalizeUrl("https://www.nurik.ai")).toBe("https://www.nurik.ai");
+    expect(normalizeUrl("https://www.example.com")).toBe("https://www.example.com");
     expect(normalizeUrl("http://example.com")).toBe("http://example.com");
     expect(normalizeUrl("mailto:someone@example.com")).toBe("mailto:someone@example.com");
     expect(normalizeUrl("tel:+15551234567")).toBe("tel:+15551234567");
@@ -27,7 +27,7 @@ describe("normalizeUrl", () => {
   });
 
   it("trims, and treats blank as no link", () => {
-    expect(normalizeUrl("  nurik.ai  ")).toBe("https://nurik.ai");
+    expect(normalizeUrl("  example.com  ")).toBe("https://example.com");
     expect(normalizeUrl("")).toBeNull();
     expect(normalizeUrl("   ")).toBeNull();
     expect(normalizeUrl(null)).toBeNull();

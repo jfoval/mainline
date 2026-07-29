@@ -1,7 +1,7 @@
 /**
  * Normalize a link the user typed into something a browser will actually follow.
  *
- * The bug this exists for: "www.nurik.ai" in an href has no scheme, so it's a RELATIVE path —
+ * The bug this exists for: "www.example.com" in an href has no scheme, so it's a RELATIVE path —
  * the browser resolves it against the current page and you get a 404 on your own site. Nobody
  * types "https://" when jotting a note, so we add it.
  *

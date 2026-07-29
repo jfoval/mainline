@@ -143,7 +143,7 @@ function NewReferenceForm({ projects }: { projects: readonly Project[] }) {
         value={url}
         onChange={(e) => setUrl(e.target.value)}
         inputMode="url"
-        placeholder="e.g. nurik.ai"
+        placeholder="e.g. example.com"
         className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-accent"
       />
       {active.length > 0 && (
@@ -229,7 +229,7 @@ function ReferenceRow({
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           inputMode="url"
-          placeholder="e.g. nurik.ai"
+          placeholder="e.g. example.com"
           aria-label="Link"
           className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-accent"
         />

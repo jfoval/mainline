@@ -38,6 +38,23 @@ export async function verifyEmailCode(email: string, code: string): Promise<stri
   return error ? error.message : null;
 }
 
+/**
+ * Sign in with a PASTED magic-link URL — the installed-app escape hatch that needs no email
+ * template change: iOS can't open links inside a home-screen app, but the link's token can be
+ * verified directly through the API from inside it (same verification the /verify endpoint
+ * does, minus the browser redirect). Consumes the link, so it must not have been tapped first.
+ */
+export async function verifyEmailLink(pastedUrl: string): Promise<string | null> {
+  const token = pastedUrl.match(/[?&]token=([^&\s]+)/)?.[1];
+  if (!token) return "That doesn't look like a sign-in link — paste the whole link from the email.";
+  const type = pastedUrl.match(/[?&]type=([^&\s]+)/)?.[1] ?? "magiclink";
+  const { error } = await getSupabase().auth.verifyOtp({
+    type: type as "magiclink",
+    token_hash: token,
+  });
+  return error ? error.message : null;
+}
+
 export async function signOut(): Promise<void> {
   if (!isSupabaseEnabled()) return;
   await getSupabase().auth.signOut();

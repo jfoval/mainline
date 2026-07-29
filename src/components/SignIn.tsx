@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { sendMagicLink, verifyEmailCode } from "@/lib/supabase/auth";
+import { sendMagicLink, verifyEmailCode, verifyEmailLink } from "@/lib/supabase/auth";
 
 /**
  * Passwordless sign-in. Enter email → magic link OR the 6-digit code from the same email.
@@ -31,10 +31,15 @@ export function SignIn() {
 
   async function verify(e: React.FormEvent) {
     e.preventDefault();
-    if (busy || code.trim().length < 6) return;
+    const entered = code.trim();
+    if (busy || entered.length < 6) return;
     setBusy(true);
     setError(null);
-    const err = await verifyEmailCode(email, code);
+    // One smart box: a pasted sign-in LINK (the installed-app path — iOS can't open links
+    // inside home-screen apps) or, once the email template carries it, the 6-digit code.
+    const err = entered.includes("token=")
+      ? await verifyEmailLink(entered)
+      : await verifyEmailCode(email, entered);
     setBusy(false);
     if (err) setError(err);
   }
@@ -44,19 +49,19 @@ export function SignIn() {
       <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-3 text-center">
         <h1 className="text-2xl font-semibold tracking-tight">Check your email</h1>
         <p className="text-sm text-muted">
-          We emailed <span className="text-foreground">{email.trim()}</span> a sign-in link and a
-          6-digit code. Tap the link on this device — or type the code here. (In the installed
-          app, use the code.)
+          We emailed <span className="text-foreground">{email.trim()}</span> a sign-in link. Tap
+          it on this device — or, in the installed app (where links can&apos;t open),
+          <span className="text-foreground"> press and hold the link in the email, copy it, and
+          paste it below</span>.
         </p>
         <form onSubmit={verify} className="flex flex-col gap-3">
           <input
-            inputMode="numeric"
             autoComplete="one-time-code"
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            placeholder="6-digit code"
-            aria-label="Sign-in code"
-            className="rounded-[10px] border border-border bg-surface px-3 py-2.5 text-center text-lg tracking-[0.3em] outline-none placeholder:text-base placeholder:tracking-normal placeholder:text-muted focus:border-border-strong"
+            placeholder="Paste the sign-in link (or code)"
+            aria-label="Sign-in link or code"
+            className="rounded-[10px] border border-border bg-surface px-3 py-2.5 text-center text-[15px] outline-none placeholder:text-muted focus:border-border-strong"
           />
           {error && <p className="text-sm text-danger">{error}</p>}
           <button
@@ -64,7 +69,7 @@ export function SignIn() {
             disabled={busy || code.trim().length < 6}
             className="btn-accent rounded-lg px-5 py-2.5 font-medium"
           >
-            {busy ? "Signing in…" : "Sign in with code"}
+            {busy ? "Signing in…" : "Sign in"}
           </button>
         </form>
         <button

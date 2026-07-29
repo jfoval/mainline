@@ -16,7 +16,7 @@
  * authoritative ordering fields.
  */
 import { getAdapter } from "./adapter";
-import { reconcileCapture } from "./db";
+import { hydrateCaptureIfMissing, reconcileCapture } from "./db";
 import type { OpAck } from "./sync-adapter";
 import type { Capture, ServerCapture } from "./types";
 
@@ -162,8 +162,11 @@ export class SyncEngine {
     this.emit(changed);
   }
 
-  /** Atomically merge one authoritative server row into its materialized capture. */
-  private foldServer(s: ServerCapture): Promise<Capture | null> {
+  /** Atomically merge one authoritative server row into its materialized capture. A capture
+   *  born on ANOTHER device has no local row — hydrate it first (cross-device pull). */
+  private async foldServer(s: ServerCapture): Promise<Capture | null> {
+    const created = await hydrateCaptureIfMissing(s);
+    if (created) return created;
     return reconcileCapture(s.client_id, (local, pending) => {
       // Adopt server content/status ONLY if the server has caught up to our local op highwater.
       // If newer optimistic edits are still queued, keep them; just take the ordering fields.

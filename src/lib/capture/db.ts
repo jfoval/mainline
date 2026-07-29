@@ -151,6 +151,39 @@ export async function resetDbHandle(): Promise<void> {
  * commitLocalOp) can never be clobbered by a stale read, and `client_seq` can never regress.
  * `merge` returns null to skip the write (no meaningful change). Returns the written row.
  */
+/**
+ * Materialize a capture that exists on the server but not on this device — the cross-device
+ * hydration half of pullState (reconcileCapture only HEALS rows this device already has; a
+ * capture born on another device has no local row at all). Returns the created row, or null
+ * when a local row exists (reconcile's job) or storage is unavailable.
+ */
+export async function hydrateCaptureIfMissing(s: ServerCapture): Promise<Capture | null> {
+  const db = await getDB();
+  const tx = db.transaction("captures", "readwrite");
+  const existing = await tx.objectStore("captures").get(s.client_id);
+  if (existing) {
+    await tx.done;
+    return null;
+  }
+  const row: Capture = {
+    client_id: s.client_id,
+    raw_text: s.raw_text,
+    source: s.source,
+    status: s.status,
+    audio_status: s.audio_status,
+    captured_at: s.captured_at,
+    synced_at: s.synced_at,
+    server_seq: s.server_seq,
+    skew_ms: s.skew_ms,
+    client_seq: s.client_seq,
+    version: s.version,
+    pending: false, // fully server-known — nothing queued from this device
+  };
+  await tx.objectStore("captures").put(row);
+  await tx.done;
+  return row;
+}
+
 export async function reconcileCapture(
   clientId: string,
   merge: (local: Capture, pending: boolean) => Capture | null,

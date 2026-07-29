@@ -57,7 +57,10 @@ export async function verifyEmailLink(pastedUrl: string): Promise<string | null>
 
 export async function signOut(): Promise<void> {
   if (!isSupabaseEnabled()) return;
-  await getSupabase().auth.signOut();
+  // scope "local": sign out THIS device only. The default ("global") revokes every session the
+  // user has, and the other devices only notice at their next token refresh — up to an hour
+  // later, mid-use, looking like a random signout.
+  await getSupabase().auth.signOut({ scope: "local" });
 }
 
 /**

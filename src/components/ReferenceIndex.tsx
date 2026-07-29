@@ -21,6 +21,7 @@ import {
 } from "@/lib/gtd/store";
 import type { Project, ReferenceItem } from "@/lib/gtd/types";
 import { showUndo } from "@/lib/undo";
+import { normalizeUrl } from "@/lib/url";
 
 export function ReferenceIndex() {
   const references = useReferences();
@@ -142,7 +143,7 @@ function NewReferenceForm({ projects }: { projects: readonly Project[] }) {
         value={url}
         onChange={(e) => setUrl(e.target.value)}
         inputMode="url"
-        placeholder="https://…"
+        placeholder="e.g. nurik.ai"
         className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-accent"
       />
       {active.length > 0 && (
@@ -201,6 +202,9 @@ function ReferenceRow({
   const [url, setUrl] = useState(reference.url ?? "");
   const [projectId, setProjectId] = useState(reference.project_id ?? "");
   const active = projects.filter((p) => p.status === "active");
+  // Normalized at render too, not just on save: rows stored before that fix (and anything a
+  // future import brings in) still need to open rather than 404 as a relative path.
+  const href = normalizeUrl(reference.url);
 
   async function save() {
     const ok = await updateReference(reference.id, {
@@ -225,7 +229,7 @@ function ReferenceRow({
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           inputMode="url"
-          placeholder="https://…"
+          placeholder="e.g. nurik.ai"
           aria-label="Link"
           className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-accent"
         />
@@ -269,11 +273,11 @@ function ReferenceRow({
     <li className="flex flex-wrap items-start gap-x-3 gap-y-1 rounded-[10px] border border-border bg-surface px-3 py-2.5">
       <div className="min-w-0 flex-1">
         <p className="text-[15px] leading-relaxed">{reference.title}</p>
-        {(reference.url || projectTitle) && (
+        {(href || projectTitle) && (
           <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted">
-            {reference.url && (
+            {href && (
               <a
-                href={reference.url}
+                href={href}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-accent-link underline-offset-4 hover:underline"
@@ -281,7 +285,7 @@ function ReferenceRow({
                 open link
               </a>
             )}
-            {reference.url && projectTitle && <span aria-hidden>·</span>}
+            {href && projectTitle && <span aria-hidden>·</span>}
             {projectTitle}
           </p>
         )}

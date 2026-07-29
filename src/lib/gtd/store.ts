@@ -17,6 +17,7 @@
  */
 import { useEffect, useSyncExternalStore } from "react";
 import { isSupabaseEnabled } from "@/lib/supabase/client";
+import { normalizeUrl } from "@/lib/url";
 import {
   clearGtdData,
   getGtdDB,
@@ -842,7 +843,8 @@ export async function createReference(input: {
       id: uuid(),
       title,
       body: null,
-      url: input.url?.trim() || null,
+      // A link typed without a scheme is a RELATIVE href — normalize before it's stored.
+      url: normalizeUrl(input.url),
       project_id: input.project_id ?? null,
       archived: false,
       source_capture_id: input.source_capture_id ?? null,
@@ -875,7 +877,7 @@ export async function updateReference(
     const next: ReferenceItem = {
       ...cur,
       title,
-      url: patch.url === undefined ? cur.url : patch.url?.trim() || null,
+      url: patch.url === undefined ? cur.url : normalizeUrl(patch.url),
       project_id: patch.project_id === undefined ? cur.project_id : patch.project_id,
       updated_at: nowIso(),
     };

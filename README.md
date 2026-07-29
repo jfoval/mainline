@@ -42,10 +42,8 @@ in-browser (project clarify → stall → re-action; waiting → resolve), zero 
 **Mobile-first pass (2026-07-28):** navigation is a bottom tab bar on phones (safe-area aware;
 header = logo + sign-out only), top nav on desktop — fixes the nav-over-logo overflow on the
 live site. Mic button is a 44px target and dictation errors surface as plain-language hints.
-The deploy workflow now forwards `NEXT_PUBLIC_SUPABASE_URL/_ANON_KEY` from **repo secrets** —
-once set, the public URL becomes the real signed-in app (magic link + capture sync); while
-unset it stays the offline demo. To flip it on: `gh secret set` both vars, allow-list
-`https://jfoval.github.io/mainline/` in Supabase Auth → URL Configuration, re-run deploy.
+The deploy workflow forwards `NEXT_PUBLIC_SUPABASE_URL/_ANON_KEY` from **repo secrets** (set);
+without them a build falls back to the offline demo.
 
 **GTD-domain sync (2026-07-28):** actions/projects/contexts/references now sync across devices.
 Whole-row **last-write-wins** with a durable outbox (row + dirty-mark written in ONE IndexedDB
@@ -58,42 +56,50 @@ quiesce-before-logout-wipe. Default contexts got **canonical ids** so devices me
 duplicating; the v3→v4 client upgrade remaps old rows + queues all pre-sync data for first push
 (verified in-browser). The capture spine keeps its op-log — raw thoughts stay sacred; organize
 rows are LWW replicas (rationale in 0003's header). Verify harness extended with the sync_gtd
-invariants. **Requires migration 0003 applied — see go-live checklist below.**
+invariants (migration 0003 applied live, plus one bug the first live run caught: 42702
+alias/variable collision, fixed in `cf0e644`).
 
-Health: `tsc` · `eslint` · `next build` (env-absent export) · 34 tests · live Supabase harness — all green.
+**Domain cutover + full go-live (2026-07-29) — ALL infrastructure steps are DONE:** the app is
+live at **https://mainline.support** (GitHub Pages custom domain, root path, HTTPS enforced,
+old URL redirects). DNS at Namecheap carries the Pages A-records + www and Resend's
+DKIM/SPF/DMARC/MX. Supabase sends sign-in email via **Resend custom SMTP** from
+`Mainline <hello@mainline.support>` (rate limit 30/hour, adjustable); the Magic Link template
+is branded and carries both the tap-link and the **6-digit `{{ .Token }}` code** plus install
+instructions — the code is how the installed (home-screen) app signs in, since iOS isolates
+its storage and links open in the default browser. Auth flow is **implicit** (not PKCE) so
+links sign in whichever browser opens them. Migrations
+[`0004`](supabase/migrations/0004_feedback.sql) (feedback table for the in-app Help form) and
+[`0005`](supabase/migrations/0005_context_archive.sql) (context archive sync) are applied.
+E2E-proven in a fresh browser: domain → branded email → code-only sign-in → data hydrates.
+That test caught a real gap — captures born on another device never materialized on a fresh
+one (`reconcileCapture` heals-only) — fixed via `hydrateCaptureIfMissing` in `c13cf94` and
+verified live. Captures hydrate on app open; the organize domain syncs continuously (~20s).
 
-> Remaining step-5 confirmation: the browser end-to-end (magic-link sign-in → capture → cross-device
-> sync) — the RPC/RLS contract underneath it is already proven. See [`docs/PHASE-1-SUPABASE.md`](docs/PHASE-1-SUPABASE.md).
+Health: `tsc` · `eslint` · `next build` (env-absent export) · 40 tests · live Supabase harness — all green.
 
 ## What's next — pick one
-
-**Go-live checklist (user steps, ~3 min total):** (1) `gh secret set` the two `NEXT_PUBLIC_SUPABASE_*`
-repo secrets; (2) Supabase → Authentication → URL Configuration: Site URL + Redirect URL for
-`https://jfoval.github.io/mainline/`; (3) Supabase → Authentication → Emails → "Magic Link"
-template: make the body include the 6-digit code, e.g.
-`<p>Sign in: {{ .ConfirmationURL }}</p><p>Or enter this code in the app: {{ .Token }}</p>`
-(the code is how you sign in INSIDE the installed home-screen app — a tapped link signs in the
-browser instead); (4) Supabase → SQL Editor: paste + run
-[`0003_gtd_sync.sql`](supabase/migrations/0003_gtd_sync.sql); (5) re-run the Pages deploy.
-Optional proof: `VERIFY_EMAIL_BASE=you@gmail.com node --env-file=.env.local scripts/verify-supabase.mjs`
-(needs Auth "Confirm email" OFF during the run).
 
 **A · Manual GTD engine, Slice 3 — the guided Weekly Review. Recommended.** The keystone habit
 (FOUNDATIONS §2): empty the inbox, review projects for stalls, age the Waiting-For list,
 re-decide stale Someday items — completes the manual loop. Queries sketched in
 [`docs/DATA-MODEL.md`](docs/DATA-MODEL.md) §review.
 
-**B · Phase 3 — AI clarify + knowledge base.** The accelerant over the manual engine:
-propose→approve seam (HostedClaude), KB by GTD horizons. Needs an Anthropic API key.
-Contract: [`docs/AI-CLARIFY-CONTRACT.md`](docs/AI-CLARIFY-CONTRACT.md).
+**B · Onboarding polish.** First-run welcome / get-started page (install + how-Mainline-works);
+feedback tickets → email notification to the owner (Resend; edge function or poll); tidy the 4
+throwaway `johnfoval+ml-*` test users via dashboard → Users.
 
-**C · Infra/polish.** Move to Vercel (server code + drops the basePath juggling) · gtd-domain
-backend sync (mirror the capture spine's Supabase path) · P1.5 original-audio capture · full PWA
-icon set · deferred backend hardening (see [`0002`](supabase/migrations/0002_harden_captures.sql) header).
+**C · Phase 3 — AI clarify + knowledge base.** The accelerant over the manual engine:
+propose→approve seam (HostedClaude), KB by GTD horizons. Needs an Anthropic API key and the
+Vercel move (server code). Contract: [`docs/AI-CLARIFY-CONTRACT.md`](docs/AI-CLARIFY-CONTRACT.md).
 
-> Hosting note: on GitHub Pages the app lives under `/mainline/`, so assets are
-> basePath-prefixed via `NEXT_PUBLIC_BASE_PATH`. That juggling disappears on a root host like
-> **Vercel** — worth moving once the backend/AI land (they need server code Pages can't run).
+**D · Infra/polish.** P1.5 original-audio capture · deferred backend hardening (see
+[`0002`](supabase/migrations/0002_harden_captures.sql) header) · Google one-tap sign-in ·
+harness rerun (needs Auth "Confirm email" toggled OFF temporarily:
+`VERIFY_EMAIL_BASE=you@gmail.com node --env-file=.env.local scripts/verify-supabase.mjs`).
+
+> Hosting note: the custom domain serves from the ROOT (no basePath). GitHub Pages remains the
+> host until Phase 3 AI needs server code — then the same domain repoints to **Vercel** with no
+> user-visible change.
 
 ### Run it
 

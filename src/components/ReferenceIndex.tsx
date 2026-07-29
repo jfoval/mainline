@@ -1,9 +1,10 @@
 "use client";
 
 /**
- * Reference — an INDEX, not a vault. Each row is the line you'd tell yourself ("Warranty —
- * Gmail, search Dyson"), optionally a link, optionally tied to a project. Mainline remembers
- * where the thing lives; the thing itself stays where it already is.
+ * Reference — the answer to "where did I put that?". Each row is a note to yourself about
+ * where something is kept ("Dyson warranty: in Gmail, search Dyson"), optionally with a link and
+ * optionally tied to a project. The thing itself stays wherever it already is; Mainline only
+ * remembers where that was.
  *
  * Search is a plain client-side filter over the line, the link and the project name — the whole
  * index lives in memory anyway, and anything cleverer would be a search engine for a list you
@@ -47,8 +48,8 @@ export function ReferenceIndex() {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search the index"
-          aria-label="Search reference"
+          placeholder="Search these notes"
+          aria-label="Search your reference notes"
           type="search"
           className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-accent"
         />
@@ -56,10 +57,10 @@ export function ReferenceIndex() {
 
       {references.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-2 py-16 text-center">
-          <p className="text-lg font-medium">Nothing filed yet</p>
+          <p className="text-lg font-medium">Nothing here yet</p>
           <p className="max-w-sm text-sm text-muted">
-            Note where something lives, not the thing itself: “Warranty: Gmail, search Dyson”,
-            “Lease: blue folder in the hall cupboard”.
+            Write down where you keep something, so you can find it later. For example:
+            “Dyson warranty: in Gmail, search Dyson”, or “Lease: blue folder in the hall cupboard”.
           </p>
         </div>
       ) : shown.length === 0 ? (
@@ -112,7 +113,7 @@ function NewReferenceForm({ projects }: { projects: readonly Project[] }) {
         onClick={() => setOpen(true)}
         className="self-start rounded-lg border border-border px-4 py-2 text-sm text-muted transition-colors hover:border-border-strong hover:text-foreground"
       >
-        + File a pointer
+        + Note where something is
       </button>
     );
   }
@@ -120,7 +121,7 @@ function NewReferenceForm({ projects }: { projects: readonly Project[] }) {
   return (
     <div className="flex flex-col gap-3 rounded-[10px] border border-border bg-surface-2 p-3">
       <label className="text-sm text-muted" htmlFor="ref-title">
-        Where does it live?
+        What is it, and where do you keep it?
       </label>
       <input
         id="ref-title"
@@ -130,7 +131,7 @@ function NewReferenceForm({ projects }: { projects: readonly Project[] }) {
         onKeyDown={(e) => {
           if (e.key === "Enter") void create();
         }}
-        placeholder="e.g. Warranty: Gmail, search Dyson"
+        placeholder="e.g. Dyson warranty: in Gmail, search Dyson"
         className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-accent"
       />
       <label className="text-sm text-muted" htmlFor="ref-url">
@@ -179,7 +180,7 @@ function NewReferenceForm({ projects }: { projects: readonly Project[] }) {
           onClick={() => void create()}
           className="btn-accent rounded-lg px-4 py-2 font-medium"
         >
-          File it
+          Save
         </button>
       </div>
     </div>
@@ -217,7 +218,7 @@ function ReferenceRow({
           autoFocus
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          aria-label="Reference line"
+          aria-label="What it is and where you keep it"
           className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[15px] outline-none focus:border-accent"
         />
         <input

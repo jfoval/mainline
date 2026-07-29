@@ -98,9 +98,11 @@ export default function GuidePage() {
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-medium">Reference</h2>
         <p className="text-[15px] text-muted">
-          Reference is a searchable index of where things are: a line of text, an optional link,
-          and optionally tied to a project. It&apos;s not a filing cabinet. It&apos;s the note that
-          tells you which cabinet to open.
+          Reference answers &ldquo;where did I put that?&rdquo;. Each entry is a note to yourself
+          about where something is kept: &ldquo;Dyson warranty: in Gmail, search Dyson&rdquo;,
+          &ldquo;Lease: blue folder in the hall cupboard&rdquo;. You can add a link, tie it to a
+          project, and search the lot. Mainline doesn&apos;t hold the documents themselves; it
+          holds where you left them.
         </p>
       </section>
 

@@ -18,7 +18,7 @@ export const NAV_ITEMS = [
 
 export const MORE_ITEMS = [
   { href: "/someday", label: "Someday / Maybe", hint: "Things you might do, kept safe." },
-  { href: "/reference", label: "Reference", hint: "Where things live, not the things." },
+  { href: "/reference", label: "Reference", hint: "Notes about where you keep things." },
   { href: "/horizons", label: "Horizons", hint: "Purpose, vision, goals, areas of focus." },
   { href: "/contexts", label: "Contexts", hint: "Your @home, @errands, @anyone list." },
   { href: "/guides", label: "Guides", hint: "How the app works, the method, and installing it." },

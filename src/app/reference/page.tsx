@@ -13,7 +13,7 @@ export default function ReferencePage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Reference</h1>
         <p className="mt-1 text-sm text-muted">
-          Where things live, not the things themselves. One searchable line each.
+          Notes about where you keep things, so you can find them again later.
         </p>
       </div>
       <ReferenceIndex />

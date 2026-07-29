@@ -156,6 +156,12 @@ export function ClarifyPanel({
       {step === "no" && (
         <div className="flex flex-col gap-3">
           <p className="text-sm text-muted">Not actionable. Where does it go?</p>
+          {/* These three words are jargon until someone tells you what they mean, and clarify is
+              exactly where a newcomer meets them. */}
+          <p className="text-xs text-tertiary">
+            Someday for things you might do one day. Reference for a note about where something is
+            kept. Trash for the rest.
+          </p>
           <div className="flex flex-wrap gap-2 text-sm">
             <button type="button" disabled={busy} onClick={someday} className="rounded-lg border border-border px-4 py-2 transition-colors hover:border-border-strong hover:text-foreground">
               Someday / Maybe
